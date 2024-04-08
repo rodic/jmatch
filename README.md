@@ -47,7 +47,7 @@ To parse JSON using `jmatch`, you would typically follow these steps:
     ```go
     json := "{\"a\": {\"b\": [1, 2]}}"
 
-    jmatch.Match(tc.json, &fm)
+    jmatch.Match(json, &fm)
 
     fmt.Printf("%v", fm.matches) // {'.a.b.[1]'}
     ```
@@ -55,6 +55,7 @@ To parse JSON using `jmatch`, you would typically follow these steps:
 
 ## todo
 
+- improve text match to allow other characters beside letters
 - handle json with more complex keys {"a.b": 1}
 - improve error reporting
 - cmd tool
