@@ -10,7 +10,7 @@ type FixedTokenValueMatch struct {
 	matches        []string
 }
 
-func (fm *FixedTokenValueMatch) match(path string, token Token) {
+func (fm *FixedTokenValueMatch) Match(path string, token Token) {
 	if token.Value == fm.matchingString {
 		fm.matches = append(fm.matches, path)
 	}

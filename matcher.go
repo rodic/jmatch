@@ -1,7 +1,7 @@
 package jmatch
 
 type Matcher interface {
-	match(path string, token Token)
+	Match(path string, token Token)
 }
 
 func Match(json string, m Matcher) (Matcher, error) {
@@ -20,7 +20,7 @@ func Match(json string, m Matcher) (Matcher, error) {
 	}
 
 	for path, token := range result {
-		m.match(path, token)
+		m.Match(path, token)
 	}
 
 	return m, nil
