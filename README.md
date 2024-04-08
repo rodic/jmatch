@@ -12,36 +12,36 @@ To parse JSON using `jmatch`, you would typically follow these steps:
 2. Create a matcher object that implements `jmatch.Matcher` interface:
     ```go
     type Matcher interface {
-	    match(path string, token Token)
+        match(path string, token Token)
     }
     ```
 
     `jmatch` parser will produce `path` -> `token` mappings, where `path` is a string in from `.key.[arrayIndex]` and `token` is a struct with value (stored as string) and type (string, number, bool, null)
     ```go
     type Token struct {
-    	tokenType TokenType
-    	value     string
+        tokenType TokenType
+        value     string
     }
     ```
     the matcher will be called with both of them.
 
     ```go
     type FixedTokenValueMatch struct {
-    	matchingString string
-	    matches        []string
+        matchingString string
+        matches        []string
     }
 
     func (fm *FixedTokenValueMatch) match(path string, token Token) {
 	    if token.value == fm.matchingString {
-		    fm.matches = append(fm.matches, path)
-	    }
+            fm.matches = append(fm.matches, path)
+        }
     }
 
     fm := FixedTokenValueMatch{
         matchingString: "2",
         matches: make([]string, 0, 8)
     }
-   ```
+    ```
 
 3. Call Match fn against input JSON and matcher:
     ```go
@@ -50,8 +50,7 @@ To parse JSON using `jmatch`, you would typically follow these steps:
     jmatch.Match(tc.json, &fm)
 
     fmt.Printf("%v", fm.matches) // {'.a.b.[1]'}
-
-   ```
+    ```
 
 
 ## todo
