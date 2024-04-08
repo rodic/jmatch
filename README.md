@@ -92,7 +92,7 @@ func main() {
 }
 ```
 
-## todo
+## TODO
 
 - improve text match to allow other characters beside letters
 - handle json with more complex keys {"a.b": 1}
@@ -103,3 +103,7 @@ func main() {
 - regular expressions
 - numbers
 - streaming
+
+## License
+
+This project is licensed under the MIT license. Please see the [LICENSE](LICENSE) file for more details.
