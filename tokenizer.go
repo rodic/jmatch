@@ -5,32 +5,32 @@ import (
 	"unicode"
 )
 
-type Tokenizer struct {
+type tokenizer struct {
 	input    []rune
 	inputLen int
 	position int
 }
 
-func NewTokenizer(jInput string) Tokenizer {
+func newTokenizer(jInput string) tokenizer {
 	runes := []rune(jInput)
-	return Tokenizer{
+	return tokenizer{
 		input:    runes,
 		inputLen: len(runes),
 		position: 0,
 	}
 }
 
-func (t *Tokenizer) done() bool {
+func (t *tokenizer) done() bool {
 	return t.position >= t.inputLen
 }
 
-func (t *Tokenizer) current() rune {
+func (t *tokenizer) current() rune {
 	r := t.input[t.position]
 	t.move()
 	return r
 }
 
-func (t *Tokenizer) getString() string {
+func (t *tokenizer) getString() string {
 	res := []rune{}
 
 	for {
@@ -43,7 +43,7 @@ func (t *Tokenizer) getString() string {
 	return string(res)
 }
 
-func (t *Tokenizer) getNumber() string {
+func (t *tokenizer) getNumber() string {
 	res := []rune{}
 	dotCount := 0 // one dot in num is allowed
 	isFirst := true
@@ -73,7 +73,7 @@ func (t *Tokenizer) getNumber() string {
 	return string(res)
 }
 
-func (t *Tokenizer) getText() string {
+func (t *tokenizer) getText() string {
 	res := []rune{}
 	t.rewind()
 
@@ -90,15 +90,15 @@ func (t *Tokenizer) getText() string {
 	return string(res)
 }
 
-func (t *Tokenizer) move() {
+func (t *tokenizer) move() {
 	t.position++
 }
 
-func (t *Tokenizer) rewind() {
+func (t *tokenizer) rewind() {
 	t.position--
 }
 
-func (t *Tokenizer) Tokenize() ([]Token, error) {
+func (t *tokenizer) tokenize() ([]Token, error) {
 
 	res := make([]Token, 0, 8)
 

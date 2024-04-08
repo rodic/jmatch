@@ -2,75 +2,75 @@ package jmatch
 
 import "fmt"
 
-type ParsingType int
+type parsingType int
 
 const (
-	Object ParsingType = iota
+	Object parsingType = iota
 	Array
 )
 
-type ParsingContext struct {
+type parsingContext struct {
 	path        string
 	elemsCount  int
-	parsingType ParsingType
+	parsingType parsingType
 }
 
-func (p ParsingContext) inArray() bool {
+func (p parsingContext) inArray() bool {
 	return p.parsingType == Array
 }
 
-func (p ParsingContext) inObject() bool {
+func (p parsingContext) inObject() bool {
 	return p.parsingType == Object
 }
 
-type Stack struct {
-	stack []ParsingContext
-	cnt   int
+type stack struct {
+	_stack []parsingContext
+	cnt    int
 }
 
-func (s *Stack) pop() ParsingContext {
+func (s *stack) pop() parsingContext {
 	s.cnt--
-	top := s.stack[s.cnt]
-	s.stack = s.stack[:s.cnt]
+	top := s._stack[s.cnt]
+	s._stack = s._stack[:s.cnt]
 	return top
 }
 
-func (s *Stack) push(stackFame ParsingContext) {
-	s.stack = append(s.stack, stackFame)
+func (s *stack) push(stackFame parsingContext) {
+	s._stack = append(s._stack, stackFame)
 	s.cnt++
 }
 
-func NewStack() Stack {
-	return Stack{
-		stack: []ParsingContext{},
-		cnt:   0,
+func newStack() stack {
+	return stack{
+		_stack: []parsingContext{},
+		cnt:    0,
 	}
 }
 
-type ParsingResult map[string]Token
+type parsingResult map[string]Token
 
-type Parser struct {
-	tokens         Tokens
-	parsingContext ParsingContext
-	stack          Stack
+type parser struct {
+	tokens         tokensList
+	parsingContext parsingContext
+	stack          stack
 	lastKey        string
-	result         ParsingResult
+	result         parsingResult
 	err            error
 }
 
-func NewParser(tokens []Token) Parser {
-	return Parser{
-		tokens: NewTokens(tokens),
-		stack:  NewStack(),
-		result: make(ParsingResult),
+func newParser(tokens []Token) parser {
+	return parser{
+		tokens: newTokens(tokens),
+		stack:  newStack(),
+		result: make(parsingResult),
 	}
 }
 
-func (p *Parser) IsValue(t Token) bool {
+func (p *parser) isValue(t Token) bool {
 	return t.IsString() || t.IsNumber() || t.IsBoolean() || t.IsNull()
 }
 
-func (p *Parser) parseObject() {
+func (p *parser) parseObject() {
 	currentToken, nextToken := p.tokens.current(), p.tokens.next()
 	if currentToken.IsRightBrace() {
 		p.parsingContext = p.stack.pop()
@@ -78,23 +78,23 @@ func (p *Parser) parseObject() {
 		p.lastKey = fmt.Sprintf("%s.%s", p.lastKey, currentToken.Value)
 	} else if currentToken.IsLeftBrace() && nextToken.IsString() {
 		// pass, will catch later new object start with ': {' match
-	} else if p.IsValue(currentToken) && (nextToken.IsComma() || nextToken.IsRightBrace()) {
+	} else if p.isValue(currentToken) && (nextToken.IsComma() || nextToken.IsRightBrace()) {
 		// pass, will catch later values with ': v
 	} else if currentToken.IsComma() && nextToken.IsString() {
 		// pass, it's only valid to have string after comma
 	} else if currentToken.IsColon() {
-		if p.IsValue(nextToken) {
+		if p.isValue(nextToken) {
 			p.result[p.lastKey] = nextToken
 			p.lastKey = p.parsingContext.path
 		} else if nextToken.IsLeftBrace() {
 			p.stack.push(p.parsingContext)
-			p.parsingContext = ParsingContext{
+			p.parsingContext = parsingContext{
 				path:        p.lastKey,
 				parsingType: Object,
 			}
 		} else if nextToken.IsLeftBracket() {
 			p.stack.push(p.parsingContext)
-			p.parsingContext = ParsingContext{
+			p.parsingContext = parsingContext{
 				path:        p.lastKey,
 				parsingType: Array,
 				elemsCount:  0,
@@ -107,12 +107,12 @@ func (p *Parser) parseObject() {
 	}
 }
 
-func (p *Parser) parseArray() {
+func (p *parser) parseArray() {
 	currentToken, nextToken := p.tokens.current(), p.tokens.next()
 	if currentToken.IsRightBracket() {
 		p.parsingContext = p.stack.pop()
 		p.lastKey = p.parsingContext.path
-	} else if p.IsValue(currentToken) && (nextToken.IsComma() || nextToken.IsRightBracket()) {
+	} else if p.isValue(currentToken) && (nextToken.IsComma() || nextToken.IsRightBracket()) {
 		newPath := fmt.Sprintf("%s.[%d]", p.parsingContext.path, p.parsingContext.elemsCount)
 		p.parsingContext.elemsCount++
 		p.result[newPath] = currentToken
@@ -120,7 +120,7 @@ func (p *Parser) parseArray() {
 		newPath := fmt.Sprintf("%s.[%d]", p.parsingContext.path, p.parsingContext.elemsCount)
 		p.parsingContext.elemsCount++
 		p.stack.push(p.parsingContext)
-		p.parsingContext = ParsingContext{
+		p.parsingContext = parsingContext{
 			path:        newPath,
 			parsingType: Array,
 			elemsCount:  0,
@@ -134,7 +134,7 @@ func (p *Parser) parseArray() {
 		p.lastKey = fmt.Sprintf("%s.[%d]", p.parsingContext.path, p.parsingContext.elemsCount)
 		p.parsingContext.elemsCount++
 		p.stack.push(p.parsingContext)
-		p.parsingContext = ParsingContext{
+		p.parsingContext = parsingContext{
 			path:        p.lastKey,
 			parsingType: Object,
 		}
@@ -143,8 +143,8 @@ func (p *Parser) parseArray() {
 	}
 }
 
-func (p *Parser) parse() (ParsingResult, error) {
-	p.parsingContext = ParsingContext{path: "", parsingType: Object}
+func (p *parser) parse() (parsingResult, error) {
+	p.parsingContext = parsingContext{path: "", parsingType: Object}
 	p.lastKey = ""
 
 	if p.tokens.tokensCount < 2 || !p.tokens.current().IsLeftBrace() {

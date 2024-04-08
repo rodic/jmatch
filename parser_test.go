@@ -9,7 +9,7 @@ func TestParse(t *testing.T) {
 	testCases := []struct {
 		name     string
 		tokens   []Token
-		expected ParsingResult
+		expected parsingResult
 	}{
 		{name: "{'a': '1'}",
 			tokens: []Token{
@@ -19,7 +19,7 @@ func TestParse(t *testing.T) {
 				{tokenType: String, Value: "1"},
 				{tokenType: RightBrace, Value: "}"},
 			},
-			expected: ParsingResult{
+			expected: parsingResult{
 				".a": Token{tokenType: String, Value: "1"},
 			},
 		},
@@ -44,7 +44,7 @@ func TestParse(t *testing.T) {
 
 				{tokenType: RightBrace, Value: "}"},
 			},
-			expected: ParsingResult{
+			expected: parsingResult{
 				".a": Token{tokenType: String, Value: "1"},
 				".b": Token{tokenType: String, Value: "2"},
 				".c": Token{tokenType: String, Value: "3"},
@@ -63,7 +63,7 @@ func TestParse(t *testing.T) {
 				{tokenType: RightBracket, Value: "]"},
 				{tokenType: RightBrace, Value: "}"},
 			},
-			expected: ParsingResult{
+			expected: parsingResult{
 				".a.[0]": Token{tokenType: String, Value: "1"},
 				".a.[1]": Token{tokenType: String, Value: "2"},
 			},
@@ -90,7 +90,7 @@ func TestParse(t *testing.T) {
 				{tokenType: RightBracket, Value: "]"},
 				{tokenType: RightBrace, Value: "}"},
 			},
-			expected: ParsingResult{
+			expected: parsingResult{
 				".a.[0]": Token{tokenType: String, Value: "1"},
 				".a.[1]": Token{tokenType: String, Value: "2"},
 				".b":     Token{tokenType: String, Value: "3"},
@@ -114,7 +114,7 @@ func TestParse(t *testing.T) {
 				{tokenType: RightBracket, Value: "]"},
 				{tokenType: RightBrace, Value: "}"},
 			},
-			expected: ParsingResult{
+			expected: parsingResult{
 				".a.[0]":     Token{tokenType: String, Value: "1"},
 				".a.[1].[0]": Token{tokenType: String, Value: "2"},
 				".a.[1].[1]": Token{tokenType: String, Value: "3"},
@@ -137,7 +137,7 @@ func TestParse(t *testing.T) {
 				{tokenType: RightBrace, Value: "}"},
 				{tokenType: RightBrace, Value: "}"},
 			},
-			expected: ParsingResult{
+			expected: parsingResult{
 				".a.b.c": Token{tokenType: String, Value: "3"},
 			},
 		},
@@ -162,7 +162,7 @@ func TestParse(t *testing.T) {
 				{tokenType: RightBrace, Value: "}"},
 				{tokenType: RightBrace, Value: "}"},
 			},
-			expected: ParsingResult{
+			expected: parsingResult{
 				".a.b.[0]":   Token{tokenType: String, Value: "1"},
 				".a.b.[1].c": Token{tokenType: Number, Value: "2"},
 			},
@@ -196,7 +196,7 @@ func TestParse(t *testing.T) {
 				{tokenType: RightBrace, Value: "}"},
 				{tokenType: RightBrace, Value: "}"},
 			},
-			expected: ParsingResult{
+			expected: parsingResult{
 				".s.t.[0].[0]": Token{tokenType: Number, Value: "1"},
 				".s.t.[1]":     Token{tokenType: Number, Value: "-2.0"},
 				".s.t.[2]":     Token{tokenType: String, Value: "3"},
@@ -208,7 +208,7 @@ func TestParse(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			p := NewParser(tc.tokens)
+			p := newParser(tc.tokens)
 			paths, err := p.parse()
 			if err != nil {
 				t.Error(err)

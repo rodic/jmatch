@@ -178,8 +178,8 @@ func TestTokenizeValidInputs(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tokenizer := NewTokenizer(tc.input)
-			result, err := tokenizer.Tokenize()
+			tokenizer := newTokenizer(tc.input)
+			result, err := tokenizer.tokenize()
 			if err != nil {
 				t.Error(err)
 			}
@@ -206,8 +206,8 @@ func TestTokenizeInvalidInputs(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tokenizer := NewTokenizer(tc.input)
-			res, err := tokenizer.Tokenize()
+			tokenizer := newTokenizer(tc.input)
+			res, err := tokenizer.tokenize()
 			if err == nil {
 				t.Errorf("Expected error %s got result %v", tc.expected, res)
 			}

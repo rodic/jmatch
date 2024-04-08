@@ -60,31 +60,31 @@ func (t Token) IsColon() bool {
 	return t.tokenType == Colon
 }
 
-type Tokens struct {
+type tokensList struct {
 	tokens      []Token
 	tokensCount int
 	currentId   int
 	nextId      int
 }
 
-func (t *Tokens) current() Token {
+func (t *tokensList) current() Token {
 	return t.tokens[t.currentId]
 }
 
-func (t *Tokens) next() Token {
+func (t *tokensList) next() Token {
 	return t.tokens[t.currentId+1]
 }
 
-func (t *Tokens) hasNext() bool {
+func (t *tokensList) hasNext() bool {
 	return t.currentId < t.tokensCount-2
 }
 
-func (t *Tokens) move() {
+func (t *tokensList) move() {
 	t.currentId++
 }
 
-func NewTokens(tokens []Token) Tokens {
-	return Tokens{
+func newTokens(tokens []Token) tokensList {
+	return tokensList{
 		tokens:      tokens,
 		tokensCount: len(tokens),
 		currentId:   0,

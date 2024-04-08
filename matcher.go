@@ -5,14 +5,14 @@ type Matcher interface {
 }
 
 func Match(json string, m Matcher) (Matcher, error) {
-	tokenizer := NewTokenizer(json)
-	tokens, err := tokenizer.Tokenize()
+	tokenizer := newTokenizer(json)
+	tokens, err := tokenizer.tokenize()
 
 	if err != nil {
 		return nil, err
 	}
 
-	parser := NewParser(tokens)
+	parser := newParser(tokens)
 	result, err := parser.parse()
 
 	if err != nil {
