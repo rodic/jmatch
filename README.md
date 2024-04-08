@@ -19,7 +19,7 @@ To parse JSON using `jmatch`, you would typically follow these steps:
     }
     ```
 
-    `jmatch` parser will produce `path` -> `token` mappings, where `path` is a string in from `.key.[arrayIndex]` and `token` is a struct with value (stored as string) and type (string, number, bool, null)
+    `jmatch` parser will produce (`path`, `token`) pairs, where `path` is a string in from `.key.[arrayIndex]` and `token` is a struct with value (stored as string) and type (string, number, bool, null)
     ```go
     package jmatch
 
@@ -28,7 +28,7 @@ To parse JSON using `jmatch`, you would typically follow these steps:
         Value     string
     }
     ```
-    the matcher will be called with both of them.
+    the matcher will be called with `path` and `token`.
 
     ```go
     type FixedTokenValueMatch struct {
@@ -88,7 +88,7 @@ func main() {
 
 	jmatch.Match(json, &fm)
 
-	fmt.Printf("%v\n", fm.matches) // {'.a.b.[1]'}
+	fmt.Printf("%v\n", fm.matches) // [.a.b.[1]]
 }
 ```
 
