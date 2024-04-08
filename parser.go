@@ -47,22 +47,20 @@ func newStack() stack {
 	}
 }
 
-type parsingResult map[string]Token
-
 type parser struct {
 	tokens         tokensList
 	parsingContext parsingContext
 	stack          stack
 	lastKey        string
-	result         parsingResult
+	matcher        Matcher
 	err            error
 }
 
-func newParser(tokens []Token) parser {
+func newParser(tokens []Token, matcher Matcher) parser {
 	return parser{
-		tokens: newTokens(tokens),
-		stack:  newStack(),
-		result: make(parsingResult),
+		tokens:  newTokens(tokens),
+		stack:   newStack(),
+		matcher: matcher,
 	}
 }
 
@@ -84,7 +82,7 @@ func (p *parser) parseObject() {
 		// pass, it's only valid to have string after comma
 	} else if currentToken.IsColon() {
 		if p.isValue(nextToken) {
-			p.result[p.lastKey] = nextToken
+			p.matcher.Match(p.lastKey, nextToken)
 			p.lastKey = p.parsingContext.path
 		} else if nextToken.IsLeftBrace() {
 			p.stack.push(p.parsingContext)
@@ -115,7 +113,7 @@ func (p *parser) parseArray() {
 	} else if p.isValue(currentToken) && (nextToken.IsComma() || nextToken.IsRightBracket()) {
 		newPath := fmt.Sprintf("%s.[%d]", p.parsingContext.path, p.parsingContext.elemsCount)
 		p.parsingContext.elemsCount++
-		p.result[newPath] = currentToken
+		p.matcher.Match(newPath, currentToken)
 	} else if nextToken.IsLeftBracket() {
 		newPath := fmt.Sprintf("%s.[%d]", p.parsingContext.path, p.parsingContext.elemsCount)
 		p.parsingContext.elemsCount++
@@ -143,7 +141,7 @@ func (p *parser) parseArray() {
 	}
 }
 
-func (p *parser) parse() (parsingResult, error) {
+func (p *parser) parse() error {
 	p.parsingContext = parsingContext{path: "", parsingType: Object}
 	p.lastKey = ""
 
@@ -161,7 +159,7 @@ func (p *parser) parse() (parsingResult, error) {
 		}
 
 		if p.err != nil {
-			return p.result, p.err
+			return p.err
 		}
 
 		p.tokens.move()
@@ -170,5 +168,5 @@ func (p *parser) parse() (parsingResult, error) {
 		p.err = fmt.Errorf("invalid JSON. the last token must be }")
 	}
 
-	return p.result, p.err
+	return p.err
 }

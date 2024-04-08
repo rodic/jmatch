@@ -12,15 +12,11 @@ func Match(json string, m Matcher) (Matcher, error) {
 		return nil, err
 	}
 
-	parser := newParser(tokens)
-	result, err := parser.parse()
+	parser := newParser(tokens, m)
+	err = parser.parse()
 
 	if err != nil {
 		return nil, err
-	}
-
-	for path, token := range result {
-		m.Match(path, token)
 	}
 
 	return m, nil

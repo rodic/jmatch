@@ -5,6 +5,22 @@ import (
 	"testing"
 )
 
+type parsingResult = map[string]Token
+
+type collectorMatcher struct {
+	collection parsingResult
+}
+
+func (c *collectorMatcher) Match(path string, token Token) {
+	c.collection[path] = token // just collect everything
+}
+
+func newCollectorMatcher() collectorMatcher {
+	return collectorMatcher{
+		collection: make(parsingResult),
+	}
+}
+
 func TestParse(t *testing.T) {
 	testCases := []struct {
 		name     string
@@ -208,14 +224,15 @@ func TestParse(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			p := newParser(tc.tokens)
-			paths, err := p.parse()
+			m := newCollectorMatcher()
+			p := newParser(tc.tokens, &m)
+			err := p.parse()
 			if err != nil {
 				t.Error(err)
 			}
 
-			if !reflect.DeepEqual(paths, tc.expected) {
-				t.Errorf("Expected '%v', got '%v' instead\n", tc.expected, paths)
+			if !reflect.DeepEqual(m.collection, tc.expected) {
+				t.Errorf("Expected '%v', got '%v' instead\n", tc.expected, m.collection)
 			}
 		})
 	}
