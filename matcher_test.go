@@ -11,7 +11,7 @@ type FixedTokenValueMatch struct {
 }
 
 func (fm *FixedTokenValueMatch) match(path string, token Token) {
-	if token.value == fm.matchingString {
+	if token.Value == fm.matchingString {
 		fm.matches = append(fm.matches, path)
 	}
 }

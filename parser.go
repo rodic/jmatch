@@ -75,7 +75,7 @@ func (p *Parser) parseObject() {
 	if currentToken.IsRightBrace() {
 		p.parsingContext = p.stack.pop()
 	} else if currentToken.IsString() && nextToken.IsColon() { // key found
-		p.lastKey = fmt.Sprintf("%s.%s", p.lastKey, currentToken.value)
+		p.lastKey = fmt.Sprintf("%s.%s", p.lastKey, currentToken.Value)
 	} else if currentToken.IsLeftBrace() && nextToken.IsString() {
 		// pass, will catch later new object start with ': {' match
 	} else if p.IsValue(currentToken) && (nextToken.IsComma() || nextToken.IsRightBrace()) {
@@ -100,10 +100,10 @@ func (p *Parser) parseObject() {
 				elemsCount:  0,
 			}
 		} else {
-			p.err = fmt.Errorf("invalid JSON %s -> %s", currentToken.value, nextToken.value)
+			p.err = fmt.Errorf("invalid JSON %s -> %s", currentToken.Value, nextToken.Value)
 		}
 	} else {
-		p.err = fmt.Errorf("invalid JSON %s -> %s", currentToken.value, nextToken.value)
+		p.err = fmt.Errorf("invalid JSON %s -> %s", currentToken.Value, nextToken.Value)
 	}
 }
 
@@ -139,7 +139,7 @@ func (p *Parser) parseArray() {
 			parsingType: Object,
 		}
 	} else {
-		p.err = fmt.Errorf("invalid JSON %s -> %s", currentToken.value, nextToken.value)
+		p.err = fmt.Errorf("invalid JSON %s -> %s", currentToken.Value, nextToken.Value)
 	}
 }
 

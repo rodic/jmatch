@@ -6,7 +6,7 @@ To parse JSON using `jmatch`, you would typically follow these steps:
 
 1. Import the `jmatch` package in your Go code:
     ```go
-    import "github.com/arodic/jmatch"
+    import "github.com/rodic/jmatch"
     ```
 
 2. Create a matcher object that implements `jmatch.Matcher` interface:

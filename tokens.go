@@ -4,7 +4,7 @@ type TokenType int
 
 type Token struct {
 	tokenType TokenType
-	value     string
+	Value     string
 }
 
 const (

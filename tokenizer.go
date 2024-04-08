@@ -105,32 +105,32 @@ func (t *Tokenizer) Tokenize() ([]Token, error) {
 	for !t.done() {
 		switch c := t.current(); c {
 		case '{':
-			res = append(res, Token{tokenType: LeftBrace, value: "{"})
+			res = append(res, Token{tokenType: LeftBrace, Value: "{"})
 		case '}':
-			res = append(res, Token{tokenType: RightBrace, value: "}"})
+			res = append(res, Token{tokenType: RightBrace, Value: "}"})
 		case '[':
-			res = append(res, Token{tokenType: LeftBracket, value: "["})
+			res = append(res, Token{tokenType: LeftBracket, Value: "["})
 		case ']':
-			res = append(res, Token{tokenType: RightBracket, value: "]"})
+			res = append(res, Token{tokenType: RightBracket, Value: "]"})
 		case ',':
-			res = append(res, Token{tokenType: Comma, value: ","})
+			res = append(res, Token{tokenType: Comma, Value: ","})
 		case '"':
 			str := t.getString()
-			res = append(res, Token{tokenType: String, value: str})
+			res = append(res, Token{tokenType: String, Value: str})
 		case ':':
-			res = append(res, Token{tokenType: Colon, value: ":"})
+			res = append(res, Token{tokenType: Colon, Value: ":"})
 		case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 			digit := t.getNumber()
-			res = append(res, Token{tokenType: Number, value: digit})
+			res = append(res, Token{tokenType: Number, Value: digit})
 		case ' ':
 			continue
 		default:
 			text := t.getText()
 
 			if text == "true" || text == "false" {
-				res = append(res, Token{tokenType: Boolean, value: text})
+				res = append(res, Token{tokenType: Boolean, Value: text})
 			} else if text == "null" {
-				res = append(res, Token{tokenType: Null, value: text})
+				res = append(res, Token{tokenType: Null, Value: text})
 			} else if text != "" {
 				errorPos := t.position + 1 - len(text)
 				return nil, fmt.Errorf("unexpected token %s in JSON at position %d", text, errorPos)
