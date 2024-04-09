@@ -96,10 +96,10 @@ func (p *parser) parseArray() {
 		!(nextToken.IsComma() || nextToken.IsRightBrace() || nextToken.IsRightBracket()) {
 		//
 	} else if currentToken.IsLeftBrace() {
-		newPath := p.context.arrayPath()
+		newContextPath := p.context.arrayPath()
 		p.context.increaseElemsCount()
 		p.stack.push(p.context)
-		p.context = newParsingContext(newPath, Object)
+		p.context = newParsingContext(newContextPath, Object)
 	} else {
 		p.err = fmt.Errorf("invalid JSON %s -> %s", currentToken.Value, nextToken.Value)
 	}
