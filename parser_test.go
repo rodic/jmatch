@@ -102,6 +102,31 @@ func TestParse(t *testing.T) {
 			},
 		},
 
+		{name: "{'a': [[[[[[1]]]]]]}",
+			tokens: []Token{
+				{tokenType: LeftBrace, Value: "{"},
+				{tokenType: String, Value: "a"},
+				{tokenType: Colon, Value: ":"},
+				{tokenType: LeftBracket, Value: "["},
+				{tokenType: LeftBracket, Value: "["},
+				{tokenType: LeftBracket, Value: "["},
+				{tokenType: LeftBracket, Value: "["},
+				{tokenType: LeftBracket, Value: "["},
+				{tokenType: LeftBracket, Value: "["},
+				{tokenType: String, Value: "1"},
+				{tokenType: RightBracket, Value: "]"},
+				{tokenType: RightBracket, Value: "]"},
+				{tokenType: RightBracket, Value: "]"},
+				{tokenType: RightBracket, Value: "]"},
+				{tokenType: RightBracket, Value: "]"},
+				{tokenType: RightBracket, Value: "]"},
+				{tokenType: RightBrace, Value: "}"},
+			},
+			expected: parsingResult{
+				".a.[0].[0].[0].[0].[0].[0]": Token{tokenType: String, Value: "1"},
+			},
+		},
+
 		{name: "{'a': ['1', ['2', '3']]}",
 			tokens: []Token{
 				{tokenType: LeftBrace, Value: "{"},
@@ -144,9 +169,9 @@ func TestParse(t *testing.T) {
 				{tokenType: Colon, Value: ":"},
 				{tokenType: String, Value: "3"},
 				{tokenType: RightBrace, Value: "}"},
-				{tokenType: LeftBracket, Value: "]"},
+				{tokenType: RightBracket, Value: "]"},
 				{tokenType: RightBrace, Value: "}"},
-				{tokenType: LeftBracket, Value: "]"},
+				{tokenType: RightBracket, Value: "]"},
 				{tokenType: RightBrace, Value: "}"},
 			},
 			expected: parsingResult{

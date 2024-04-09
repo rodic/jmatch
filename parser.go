@@ -28,12 +28,10 @@ func (p *parser) parseObject() {
 		p.context = p.stack.pop()
 	} else if currentToken.IsString() && nextToken.IsColon() { // key found
 		p.context.setLastKey(currentToken.Value)
-	} else if currentToken.IsLeftBrace() && nextToken.IsString() {
-		// pass, will catch later new object start with ': {' match
+	} else if (currentToken.IsLeftBrace() || currentToken.IsComma()) && nextToken.IsString() {
+		// pass, covered in the previous case
 	} else if p.isValue(currentToken) && (nextToken.IsComma() || nextToken.IsRightBrace()) {
-		// pass, will catch later values with ': v
-	} else if currentToken.IsComma() && nextToken.IsString() {
-		// pass, it's only valid to have string after comma
+		// pass, will catch later values by matching them against ':'
 	} else if currentToken.IsColon() {
 		if p.isValue(nextToken) {
 			p.matcher.Match(p.context.lastKey, nextToken)
@@ -58,24 +56,25 @@ func (p *parser) parseArray() {
 	currentToken, nextToken := p.tokens.current(), p.tokens.next()
 	if currentToken.IsRightBracket() {
 		p.context = p.stack.pop()
+	} else if currentToken.IsLeftBracket() || currentToken.IsComma() {
+		if p.isValue(nextToken) {
+			p.matcher.Match(p.context.arrayPath(), nextToken)
+			p.context.increaseElemsCount()
+		} else if nextToken.IsLeftBracket() {
+			newContextPath := p.context.arrayPath()
+			p.context.increaseElemsCount()
+			p.stack.push(p.context)
+			p.context = newParsingContext(newContextPath, Array)
+		} else if nextToken.IsLeftBrace() {
+			newContextPath := p.context.arrayPath()
+			p.context.increaseElemsCount()
+			p.stack.push(p.context)
+			p.context = newParsingContext(newContextPath, Object)
+		} else {
+			p.err = fmt.Errorf("invalid JSON %s -> %s", currentToken.Value, nextToken.Value)
+		}
 	} else if p.isValue(currentToken) && (nextToken.IsComma() || nextToken.IsRightBracket()) {
-		p.matcher.Match(p.context.arrayPath(), currentToken)
-		p.context.increaseElemsCount()
-	} else if nextToken.IsLeftBracket() {
-		newContextPath := p.context.arrayPath()
-		p.context.increaseElemsCount()
-		p.stack.push(p.context)
-		p.context = newParsingContext(newContextPath, Array)
-	} else if currentToken.IsLeftBracket() {
-		// skipping the first '[', all else covered in the previous case.
-	} else if currentToken.IsComma() &&
-		!(nextToken.IsComma() || nextToken.IsRightBrace() || nextToken.IsRightBracket()) {
-		//
-	} else if currentToken.IsLeftBrace() {
-		newContextPath := p.context.arrayPath()
-		p.context.increaseElemsCount()
-		p.stack.push(p.context)
-		p.context = newParsingContext(newContextPath, Object)
+		// pass, already parsed values, arrays and object when they are after comma or left bracket
 	} else {
 		p.err = fmt.Errorf("invalid JSON %s -> %s", currentToken.Value, nextToken.Value)
 	}
