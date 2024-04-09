@@ -5,6 +5,8 @@ type TokenType int
 type Token struct {
 	tokenType TokenType
 	Value     string
+	line      int
+	position  int
 }
 
 const (
@@ -58,6 +60,15 @@ func (t Token) IsNull() bool {
 
 func (t Token) IsColon() bool {
 	return t.tokenType == Colon
+}
+
+func newToken(tokenType TokenType, value string, line int, position int) Token {
+	return Token{
+		tokenType: tokenType,
+		Value:     value,
+		line:      line,
+		position:  position,
+	}
 }
 
 type tokensList struct {

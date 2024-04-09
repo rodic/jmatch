@@ -6,27 +6,30 @@ import (
 )
 
 type tokenizer struct {
-	input    []rune
-	inputLen int
-	position int
+	input               []rune
+	inputLen            int
+	runePosition        int
+	runePositionCounter positionCounter
 }
 
 func newTokenizer(jInput string) tokenizer {
 	runes := []rune(jInput)
 	return tokenizer{
-		input:    runes,
-		inputLen: len(runes),
-		position: 0,
+		input:               runes,
+		inputLen:            len(runes),
+		runePosition:        0,
+		runePositionCounter: newRunePositionCounter(),
 	}
 }
 
 func (t *tokenizer) done() bool {
-	return t.position >= t.inputLen
+	return t.runePosition >= t.inputLen
 }
 
 func (t *tokenizer) current() rune {
-	r := t.input[t.position]
+	r := t.input[t.runePosition]
 	t.move()
+	t.runePositionCounter.update(r)
 	return r
 }
 
@@ -35,6 +38,7 @@ func (t *tokenizer) getString() string {
 
 	for {
 		c := t.current()
+
 		if c == '"' {
 			break
 		}
@@ -91,11 +95,12 @@ func (t *tokenizer) getText() string {
 }
 
 func (t *tokenizer) move() {
-	t.position++
+	t.runePosition++
 }
 
 func (t *tokenizer) rewind() {
-	t.position--
+	t.runePosition--
+	t.runePositionCounter.decreaseColumn()
 }
 
 func (t *tokenizer) tokenize() ([]Token, error) {
@@ -103,39 +108,47 @@ func (t *tokenizer) tokenize() ([]Token, error) {
 	res := make([]Token, 0, 8)
 
 	for !t.done() {
-		switch c := t.current(); c {
+		c := t.current()
+
+		line := t.runePositionCounter.line
+		column := t.runePositionCounter.column
+
+		switch c {
 		case '{':
-			res = append(res, Token{tokenType: LeftBrace, Value: "{"})
+			res = append(res, newToken(LeftBrace, "{", line, column))
 		case '}':
-			res = append(res, Token{tokenType: RightBrace, Value: "}"})
+			res = append(res, newToken(RightBrace, "}", line, column))
 		case '[':
-			res = append(res, Token{tokenType: LeftBracket, Value: "["})
+			res = append(res, newToken(LeftBracket, "[", line, column))
 		case ']':
-			res = append(res, Token{tokenType: RightBracket, Value: "]"})
+			res = append(res, newToken(RightBracket, "]", line, column))
 		case ',':
-			res = append(res, Token{tokenType: Comma, Value: ","})
+			res = append(res, newToken(Comma, ",", line, column))
 		case '"':
 			str := t.getString()
-			res = append(res, Token{tokenType: String, Value: str})
+			res = append(res, newToken(String, str, line, column))
 		case ':':
-			res = append(res, Token{tokenType: Colon, Value: ":"})
+			res = append(res, newToken(Colon, ":", line, column))
 		case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 			digit := t.getNumber()
-			res = append(res, Token{tokenType: Number, Value: digit})
+			res = append(res, newToken(Number, digit, line, column))
 		case ' ':
 			continue
 		default:
 			text := t.getText()
 
 			if text == "true" || text == "false" {
-				res = append(res, Token{tokenType: Boolean, Value: text})
+				res = append(res, newToken(Boolean, text, line, column))
 			} else if text == "null" {
-				res = append(res, Token{tokenType: Null, Value: text})
+				res = append(res, newToken(Null, text, line, column))
 			} else if text != "" {
-				errorPos := t.position + 1 - len(text)
-				return nil, fmt.Errorf("unexpected token %s in JSON at position %d", text, errorPos)
+				return nil, fmt.Errorf(
+					"invalid JSON. unexpected token %s at line %d position %d", text, line, column,
+				)
 			} else {
-				return nil, fmt.Errorf("unexpected token %c in JSON at position %d", c, t.position+1)
+				return nil, fmt.Errorf(
+					"invalid JSON. unexpected token %c at line %d position %d", c, line, column,
+				)
 			}
 		}
 	}
