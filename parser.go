@@ -2,27 +2,6 @@ package jmatch
 
 import "fmt"
 
-type parsingType int
-
-const (
-	Object parsingType = iota
-	Array
-)
-
-type parsingContext struct {
-	path        string
-	elemsCount  int
-	parsingType parsingType
-}
-
-func (p parsingContext) inArray() bool {
-	return p.parsingType == Array
-}
-
-func (p parsingContext) inObject() bool {
-	return p.parsingType == Object
-}
-
 type stack struct {
 	_stack []parsingContext
 	cnt    int
@@ -48,12 +27,11 @@ func newStack() stack {
 }
 
 type parser struct {
-	tokens         tokensList
-	parsingContext parsingContext
-	stack          stack
-	lastKey        string
-	matcher        Matcher
-	err            error
+	tokens  tokensList
+	context parsingContext
+	stack   stack
+	matcher Matcher
+	err     error
 }
 
 func newParser(tokens []Token, matcher Matcher) parser {
@@ -71,9 +49,9 @@ func (p *parser) isValue(t Token) bool {
 func (p *parser) parseObject() {
 	currentToken, nextToken := p.tokens.current(), p.tokens.next()
 	if currentToken.IsRightBrace() {
-		p.parsingContext = p.stack.pop()
+		p.context = p.stack.pop()
 	} else if currentToken.IsString() && nextToken.IsColon() { // key found
-		p.lastKey = fmt.Sprintf("%s.%s", p.lastKey, currentToken.Value)
+		p.context.setLastKey(currentToken.Value)
 	} else if currentToken.IsLeftBrace() && nextToken.IsString() {
 		// pass, will catch later new object start with ': {' match
 	} else if p.isValue(currentToken) && (nextToken.IsComma() || nextToken.IsRightBrace()) {
@@ -82,21 +60,16 @@ func (p *parser) parseObject() {
 		// pass, it's only valid to have string after comma
 	} else if currentToken.IsColon() {
 		if p.isValue(nextToken) {
-			p.matcher.Match(p.lastKey, nextToken)
-			p.lastKey = p.parsingContext.path
+			p.matcher.Match(p.context.lastKey, nextToken)
+			p.context.resetLastKey()
 		} else if nextToken.IsLeftBrace() {
-			p.stack.push(p.parsingContext)
-			p.parsingContext = parsingContext{
-				path:        p.lastKey,
-				parsingType: Object,
-			}
+			p.stack.push(p.context)
+			p.context = newParsingContext(p.context.lastKey, Object)
 		} else if nextToken.IsLeftBracket() {
-			p.stack.push(p.parsingContext)
-			p.parsingContext = parsingContext{
-				path:        p.lastKey,
-				parsingType: Array,
-				elemsCount:  0,
-			}
+			newContextPath := p.context.lastKey
+			p.context.resetLastKey()
+			p.stack.push(p.context)
+			p.context = newParsingContext(newContextPath, Array)
 		} else {
 			p.err = fmt.Errorf("invalid JSON %s -> %s", currentToken.Value, nextToken.Value)
 		}
@@ -108,51 +81,41 @@ func (p *parser) parseObject() {
 func (p *parser) parseArray() {
 	currentToken, nextToken := p.tokens.current(), p.tokens.next()
 	if currentToken.IsRightBracket() {
-		p.parsingContext = p.stack.pop()
-		p.lastKey = p.parsingContext.path
+		p.context = p.stack.pop()
 	} else if p.isValue(currentToken) && (nextToken.IsComma() || nextToken.IsRightBracket()) {
-		newPath := fmt.Sprintf("%s.[%d]", p.parsingContext.path, p.parsingContext.elemsCount)
-		p.parsingContext.elemsCount++
-		p.matcher.Match(newPath, currentToken)
+		p.matcher.Match(p.context.arrayPath(), currentToken)
+		p.context.increaseElemsCount()
 	} else if nextToken.IsLeftBracket() {
-		newPath := fmt.Sprintf("%s.[%d]", p.parsingContext.path, p.parsingContext.elemsCount)
-		p.parsingContext.elemsCount++
-		p.stack.push(p.parsingContext)
-		p.parsingContext = parsingContext{
-			path:        newPath,
-			parsingType: Array,
-			elemsCount:  0,
-		}
+		newContextPath := p.context.arrayPath()
+		p.context.increaseElemsCount()
+		p.stack.push(p.context)
+		p.context = newParsingContext(newContextPath, Array)
 	} else if currentToken.IsLeftBracket() {
 		// skipping the first '[', all else covered in the previous case.
 	} else if currentToken.IsComma() &&
 		!(nextToken.IsComma() || nextToken.IsRightBrace() || nextToken.IsRightBracket()) {
 		//
 	} else if currentToken.IsLeftBrace() {
-		p.lastKey = fmt.Sprintf("%s.[%d]", p.parsingContext.path, p.parsingContext.elemsCount)
-		p.parsingContext.elemsCount++
-		p.stack.push(p.parsingContext)
-		p.parsingContext = parsingContext{
-			path:        p.lastKey,
-			parsingType: Object,
-		}
+		newPath := p.context.arrayPath()
+		p.context.increaseElemsCount()
+		p.stack.push(p.context)
+		p.context = newParsingContext(newPath, Object)
 	} else {
 		p.err = fmt.Errorf("invalid JSON %s -> %s", currentToken.Value, nextToken.Value)
 	}
 }
 
 func (p *parser) parse() error {
-	p.parsingContext = parsingContext{path: "", parsingType: Object}
-	p.lastKey = ""
+	p.context = newParsingContext("", Object)
 
 	if p.tokens.tokensCount < 2 || !p.tokens.current().IsLeftBrace() {
 		p.err = fmt.Errorf("invalid JSON. must start with { and end with }")
 	}
 
 	for p.tokens.hasNext() {
-		if p.parsingContext.inObject() {
+		if p.context.inObject() {
 			p.parseObject()
-		} else if p.parsingContext.inArray() {
+		} else if p.context.inArray() {
 			p.parseArray()
 		} else {
 			p.err = fmt.Errorf("invalid JSON")
