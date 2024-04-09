@@ -49,3 +49,27 @@ func newParsingContext(path string, pt parsingType) parsingContext {
 		_type:      pt,
 	}
 }
+
+type contextStack struct {
+	stack []parsingContext
+	cnt   int
+}
+
+func (s *contextStack) pop() parsingContext {
+	s.cnt--
+	top := s.stack[s.cnt]
+	s.stack = s.stack[:s.cnt]
+	return top
+}
+
+func (s *contextStack) push(stackFame parsingContext) {
+	s.stack = append(s.stack, stackFame)
+	s.cnt++
+}
+
+func newContextStack() contextStack {
+	return contextStack{
+		stack: []parsingContext{},
+		cnt:   0,
+	}
+}

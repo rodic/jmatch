@@ -2,34 +2,10 @@ package jmatch
 
 import "fmt"
 
-type stack struct {
-	_stack []parsingContext
-	cnt    int
-}
-
-func (s *stack) pop() parsingContext {
-	s.cnt--
-	top := s._stack[s.cnt]
-	s._stack = s._stack[:s.cnt]
-	return top
-}
-
-func (s *stack) push(stackFame parsingContext) {
-	s._stack = append(s._stack, stackFame)
-	s.cnt++
-}
-
-func newStack() stack {
-	return stack{
-		_stack: []parsingContext{},
-		cnt:    0,
-	}
-}
-
 type parser struct {
 	tokens  tokensList
 	context parsingContext
-	stack   stack
+	stack   contextStack
 	matcher Matcher
 	err     error
 }
@@ -37,7 +13,7 @@ type parser struct {
 func newParser(tokens []Token, matcher Matcher) parser {
 	return parser{
 		tokens:  newTokens(tokens),
-		stack:   newStack(),
+		stack:   newContextStack(),
 		matcher: matcher,
 	}
 }
