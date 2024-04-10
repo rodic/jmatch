@@ -367,6 +367,13 @@ func TestFailParse(t *testing.T) {
 				{tokenType: RightBrace, Value: "}", line: 1, column: 3},
 			},
 			expected: "invalid JSON. unexpected token { found at line 1 column 2"},
+		{name: "{}}",
+			tokens: []Token{
+				{tokenType: LeftBrace, Value: "{", line: 1, column: 1},
+				{tokenType: RightBrace, Value: "}", line: 1, column: 2},
+				{tokenType: RightBrace, Value: "}", line: 1, column: 3},
+			},
+			expected: "invalid JSON. Unexpected end of JSON input"},
 		{name: "{1",
 			tokens: []Token{
 				{tokenType: LeftBrace, Value: "{", line: 1, column: 1},
@@ -505,6 +512,27 @@ func TestFailParse(t *testing.T) {
 				{tokenType: RightBracket, Value: "]", line: 1, column: 3},
 			},
 			expected: "invalid JSON. Unexpected end of JSON input"},
+		{name: "[]]",
+			tokens: []Token{
+				{tokenType: LeftBracket, Value: "[", line: 1, column: 1},
+				{tokenType: RightBracket, Value: "]", line: 1, column: 2},
+				{tokenType: RightBracket, Value: "]", line: 1, column: 3},
+			},
+			expected: "invalid JSON. Unexpected end of JSON input"},
+		{name: "[,",
+			tokens: []Token{
+				{tokenType: LeftBracket, Value: "[", line: 1, column: 1},
+				{tokenType: Comma, Value: ",", line: 1, column: 2},
+			},
+			expected: "invalid JSON. unexpected token , found at line 1 column 2"},
+		{name: "[1,]",
+			tokens: []Token{
+				{tokenType: LeftBracket, Value: "[", line: 1, column: 1},
+				{tokenType: Number, Value: "1", line: 1, column: 2},
+				{tokenType: Comma, Value: ",", line: 1, column: 3},
+				{tokenType: RightBracket, Value: "]", line: 1, column: 4},
+			},
+			expected: "invalid JSON. unexpected token ] found at line 1 column 4"},
 
 		// mixed
 		{name: "{]",

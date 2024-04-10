@@ -30,6 +30,10 @@ func (p *parser) setUnexpectedEndOfInputErr() {
 
 func (p *parser) parseObject() {
 	if p.tokens.current().IsRightBrace() {
+		if p.stack.isEmpty() {
+			p.setUnexpectedEndOfInputErr()
+			return
+		}
 		p.context = p.stack.pop() // switch to previous context
 	} else {
 		current, next := p.tokens.current(), p.tokens.next()
@@ -47,8 +51,7 @@ func (p *parser) parseObject() {
 			} else {
 				p.err = next.toError()
 			}
-		} else if current.IsColon() && p.context.isKeySet() {
-
+		} else if current.IsColon() {
 			path := p.context.getPath()
 			p.context.setValue()
 
@@ -64,7 +67,6 @@ func (p *parser) parseObject() {
 			} else {
 				p.err = next.toError()
 			}
-
 		} else {
 			p.err = next.toError()
 		}
@@ -73,6 +75,10 @@ func (p *parser) parseObject() {
 
 func (p *parser) parseArray() {
 	if p.tokens.current().IsRightBracket() {
+		if p.stack.isEmpty() {
+			p.setUnexpectedEndOfInputErr()
+			return
+		}
 		p.context = p.stack.pop() // switch to previous context
 	} else {
 		current, next := p.tokens.current(), p.tokens.next()

@@ -119,6 +119,10 @@ func (s *contextStack) push(stackFame context) {
 	s.cnt++
 }
 
+func (s *contextStack) isEmpty() bool {
+	return s.cnt == 0
+}
+
 func newContextStack() contextStack {
 	return contextStack{
 		stack: []context{},
