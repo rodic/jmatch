@@ -89,9 +89,7 @@ func (p *parser) parse() error {
 			p.matcher.Match(".", first)
 			return nil
 		} else {
-			p.err = fmt.Errorf(
-				"invalid JSON. unexpected token %s found at line %d column %d",
-				first.Value, first.line, first.column)
+			p.err = first.toError()
 			return p.err
 		}
 	} else if first.IsLeftBrace() {
@@ -119,9 +117,7 @@ func (p *parser) parse() error {
 	last := p.tokens.next()
 
 	if (first.IsLeftBrace() && !last.IsRightBrace()) || (first.IsLeftBracket() && !last.IsRightBracket()) {
-		p.err = fmt.Errorf(
-			"invalid JSON. unexpected token %s found at line %d column %d",
-			last.Value, last.line, last.column)
+		p.err = last.toError()
 	}
 
 	return p.err
