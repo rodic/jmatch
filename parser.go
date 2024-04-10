@@ -6,7 +6,7 @@ import (
 
 type parser struct {
 	tokens  tokensList
-	context parsingContext
+	context context
 	stack   contextStack
 	matcher Matcher
 	err     error
@@ -42,7 +42,7 @@ func (p *parser) parseObject() {
 			p.err = current.toError()
 		} else if current.IsLeftBrace() || current.IsComma() {
 			if next.IsString() && !p.context.isKeySet() {
-				p.context.setKey(p.tokens.next().Value)
+				p.context.setKey(next.Value)
 				p.tokens.move()
 			} else {
 				p.err = next.toError()
@@ -57,10 +57,10 @@ func (p *parser) parseObject() {
 				p.tokens.move()
 			} else if next.IsLeftBrace() {
 				p.stack.push(p.context)
-				p.context = newParsingContext(path, Object)
+				p.context = newObjectContext(path)
 			} else if next.IsLeftBracket() {
 				p.stack.push(p.context)
-				p.context = newParsingContext(path, Array)
+				p.context = newArrayContext(path)
 			} else {
 				p.err = next.toError()
 			}
@@ -89,13 +89,12 @@ func (p *parser) parseArray() {
 				p.tokens.move()
 			} else if next.IsLeftBracket() {
 				p.stack.push(p.context)
-				p.context = newParsingContext(path, Array)
+				p.context = newArrayContext(path)
 			} else if next.IsLeftBrace() {
 				p.stack.push(p.context)
-				p.context = newParsingContext(path, Object)
+				p.context = newObjectContext(path)
 			} else {
 				p.err = next.toError()
-
 			}
 		} else {
 			p.err = current.toError()
@@ -123,9 +122,9 @@ func (p *parser) parse() error {
 	first := p.tokens.current()
 
 	if first.IsLeftBrace() {
-		p.context = newParsingContext("", Object)
+		p.context = newObjectContext("")
 	} else if first.IsLeftBracket() {
-		p.context = newParsingContext("", Array)
+		p.context = newArrayContext("")
 	} else {
 		p.parseSingleton()
 		return p.err
@@ -136,9 +135,9 @@ func (p *parser) parse() error {
 	for p.tokens.hasNext() {
 		parenCounter.update(p.tokens.current())
 
-		if p.context.inObject() {
+		if p.context.isObject() {
 			p.parseObject()
-		} else if p.context.inArray() {
+		} else if p.context.isArray() {
 			p.parseArray()
 		}
 
