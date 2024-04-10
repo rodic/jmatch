@@ -26,6 +26,8 @@ func (p *parser) parseObject() {
 	currentToken, nextToken := p.tokens.current(), p.tokens.next()
 	if currentToken.IsRightBrace() {
 		p.context = p.stack.pop()
+	} else if currentToken.IsLeftBrace() && nextToken.IsRightBrace() {
+		// pass, will handle it in the next iteration
 	} else if currentToken.IsString() && nextToken.IsColon() { // key found
 		p.context.setLastKey(currentToken.Value)
 	} else if (currentToken.IsLeftBrace() || currentToken.IsComma()) && nextToken.IsString() {
@@ -71,8 +73,10 @@ func (p *parser) parseArray() {
 			p.context.increaseElemsCount()
 			p.stack.push(p.context)
 			p.context = newParsingContext(newContextPath, Object)
+		} else if nextToken.IsRightBracket() {
+			// pass will handle it in the next iteration
 		} else {
-			p.err = fmt.Errorf("invalid JSON %s -> %s", currentToken.Value, nextToken.Value)
+			p.err = nextToken.toError()
 		}
 	} else if p.isValue(currentToken) && (nextToken.IsComma() || nextToken.IsRightBracket()) {
 		// pass, already parsed values, arrays and object when they are after comma or left bracket
@@ -89,7 +93,7 @@ func (p *parser) parse() error {
 			p.matcher.Match(".", first)
 			return nil
 		} else {
-			p.err = first.toError()
+			p.err = fmt.Errorf("invalid JSON. Unexpected end of JSON input")
 			return p.err
 		}
 	} else if first.IsLeftBrace() {
@@ -98,7 +102,11 @@ func (p *parser) parse() error {
 		p.context = newParsingContext("", Array)
 	}
 
-	for p.tokens.hasNext() {
+	parenCounter := newParenCounter()
+
+	for {
+		parenCounter.update(p.tokens.current())
+
 		if p.context.inObject() {
 			p.parseObject()
 		} else if p.context.inArray() {
@@ -111,13 +119,19 @@ func (p *parser) parse() error {
 			return p.err
 		}
 
-		p.tokens.move()
+		if p.tokens.hasTwoTokensLeft() {
+			p.tokens.move()
+		} else {
+			break
+		}
+
 	}
 
 	last := p.tokens.next()
+	parenCounter.update(last)
 
-	if (first.IsLeftBrace() && !last.IsRightBrace()) || (first.IsLeftBracket() && !last.IsRightBracket()) {
-		p.err = last.toError()
+	if !parenCounter.isBalanced() {
+		p.err = fmt.Errorf("invalid JSON. Unexpected end of JSON input")
 	}
 
 	return p.err

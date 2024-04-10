@@ -38,6 +38,13 @@ func TestSuccessParse(t *testing.T) {
 		},
 
 		// objects
+		{name: "{}",
+			tokens: []Token{
+				{tokenType: LeftBrace, Value: "{"},
+				{tokenType: RightBrace, Value: "}"},
+			},
+			expected: parsingResult{},
+		},
 		{name: "{'a': '1'}",
 			tokens: []Token{
 				{tokenType: LeftBrace, Value: "{"},
@@ -333,11 +340,12 @@ func TestFailParse(t *testing.T) {
 		tokens   []Token
 		expected string
 	}{
+		// objects
 		{name: "{",
 			tokens: []Token{
 				{tokenType: LeftBrace, Value: "{", line: 1, column: 1},
 			},
-			expected: "invalid JSON. unexpected token { found at line 1 column 1"},
+			expected: "invalid JSON. Unexpected end of JSON input"},
 		{name: "{{",
 			tokens: []Token{
 				{tokenType: LeftBrace, Value: "{", line: 1, column: 1},
@@ -351,24 +359,42 @@ func TestFailParse(t *testing.T) {
 				{tokenType: LeftBrace, Value: "{", line: 1, column: 3},
 			},
 			expected: "invalid JSON. unexpected token { found at line 1 column 2"},
+		{name: "{{}",
+			tokens: []Token{
+				{tokenType: LeftBrace, Value: "{", line: 1, column: 1},
+				{tokenType: LeftBrace, Value: "{", line: 1, column: 2},
+				{tokenType: RightBrace, Value: "}", line: 1, column: 3},
+			},
+			expected: "invalid JSON. unexpected token { found at line 1 column 2"},
+
+		// arrays
 		{name: "[",
 			tokens: []Token{
 				{tokenType: LeftBracket, Value: "[", line: 1, column: 1},
 			},
-			expected: "invalid JSON. unexpected token [ found at line 1 column 1"},
+			expected: "invalid JSON. Unexpected end of JSON input"},
 		{name: "[[",
 			tokens: []Token{
 				{tokenType: LeftBracket, Value: "[", line: 1, column: 1},
 				{tokenType: LeftBracket, Value: "[", line: 1, column: 2},
 			},
-			expected: "invalid JSON. unexpected token [ found at line 1 column 2"},
+			expected: "invalid JSON. Unexpected end of JSON input"},
 		{name: "[[[",
 			tokens: []Token{
 				{tokenType: LeftBracket, Value: "[", line: 1, column: 1},
 				{tokenType: LeftBracket, Value: "[", line: 1, column: 2},
 				{tokenType: LeftBracket, Value: "[", line: 1, column: 3},
 			},
-			expected: "invalid JSON. unexpected token [ found at line 1 column 3"},
+			expected: "invalid JSON. Unexpected end of JSON input"},
+		{name: "[[]",
+			tokens: []Token{
+				{tokenType: LeftBracket, Value: "[", line: 1, column: 1},
+				{tokenType: LeftBracket, Value: "[", line: 1, column: 2},
+				{tokenType: RightBracket, Value: "]", line: 1, column: 3},
+			},
+			expected: "invalid JSON. Unexpected end of JSON input"},
+
+		// mixed
 		{name: "{]",
 			tokens: []Token{
 				{tokenType: LeftBrace, Value: "{", line: 1, column: 1},

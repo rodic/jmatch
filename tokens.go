@@ -94,7 +94,7 @@ func (t *tokensList) next() Token {
 	return t.tokens[t.currentId+1]
 }
 
-func (t *tokensList) hasNext() bool {
+func (t *tokensList) hasTwoTokensLeft() bool {
 	return t.currentId < t.tokensCount-2
 }
 
