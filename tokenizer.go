@@ -143,11 +143,11 @@ func (t *tokenizer) tokenize() ([]Token, error) {
 				res = append(res, newToken(Null, text, line, column))
 			} else if text != "" {
 				return nil, fmt.Errorf(
-					"invalid JSON. unexpected token %s at line %d position %d", text, line, column,
+					"invalid JSON. unexpected token %s at line %d column %d", text, line, column,
 				)
 			} else {
 				return nil, fmt.Errorf(
-					"invalid JSON. unexpected token %c at line %d position %d", c, line, column,
+					"invalid JSON. unexpected token %c at line %d column %d", c, line, column,
 				)
 			}
 		}

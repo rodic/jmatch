@@ -6,7 +6,7 @@ type Token struct {
 	tokenType TokenType
 	Value     string
 	line      int
-	position  int
+	column    int
 }
 
 const (
@@ -62,12 +62,12 @@ func (t Token) IsColon() bool {
 	return t.tokenType == Colon
 }
 
-func newToken(tokenType TokenType, value string, line int, position int) Token {
+func newToken(tokenType TokenType, value string, line int, column int) Token {
 	return Token{
 		tokenType: tokenType,
 		Value:     value,
 		line:      line,
-		position:  position,
+		column:    column,
 	}
 }
 

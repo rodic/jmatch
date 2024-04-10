@@ -48,7 +48,8 @@ func (p *parser) parseObject() {
 			p.err = fmt.Errorf("invalid JSON %s -> %s", currentToken.Value, nextToken.Value)
 		}
 	} else {
-		p.err = fmt.Errorf("invalid JSON %s -> %s", currentToken.Value, nextToken.Value)
+		p.err = fmt.Errorf("invalid JSON. unexpected token %s found at line %d column %d",
+			nextToken.Value, nextToken.line, nextToken.column)
 	}
 }
 
@@ -81,10 +82,22 @@ func (p *parser) parseArray() {
 }
 
 func (p *parser) parse() error {
-	p.context = newParsingContext("", Object)
+	first := p.tokens.current()
 
-	if p.tokens.tokensCount < 2 || !p.tokens.current().IsLeftBrace() {
-		p.err = fmt.Errorf("invalid JSON. must start with { and end with }")
+	if p.tokens.tokensCount == 1 {
+		if p.isValue(first) {
+			p.matcher.Match(".", first)
+			return nil
+		} else {
+			p.err = fmt.Errorf(
+				"invalid JSON. unexpected token %s found at line %d column %d",
+				first.Value, first.line, first.column)
+			return p.err
+		}
+	} else if first.IsLeftBrace() {
+		p.context = newParsingContext("", Object)
+	} else if first.IsLeftBracket() {
+		p.context = newParsingContext("", Array)
 	}
 
 	for p.tokens.hasNext() {
@@ -102,8 +115,13 @@ func (p *parser) parse() error {
 
 		p.tokens.move()
 	}
-	if !p.tokens.next().IsRightBrace() {
-		p.err = fmt.Errorf("invalid JSON. the last token must be }")
+
+	last := p.tokens.next()
+
+	if (first.IsLeftBrace() && !last.IsRightBrace()) || (first.IsLeftBracket() && !last.IsRightBracket()) {
+		p.err = fmt.Errorf(
+			"invalid JSON. unexpected token %s found at line %d column %d",
+			last.Value, last.line, last.column)
 	}
 
 	return p.err

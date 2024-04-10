@@ -21,12 +21,23 @@ func newCollectorMatcher() collectorMatcher {
 	}
 }
 
-func TestParse(t *testing.T) {
+func TestSuccessParse(t *testing.T) {
 	testCases := []struct {
 		name     string
 		tokens   []Token
 		expected parsingResult
 	}{
+		// single value
+		{name: "'1'",
+			tokens: []Token{
+				{tokenType: String, Value: "1"},
+			},
+			expected: parsingResult{
+				".": Token{tokenType: String, Value: "1"},
+			},
+		},
+
+		// objects
 		{name: "{'a': '1'}",
 			tokens: []Token{
 				{tokenType: LeftBrace, Value: "{"},
@@ -39,7 +50,6 @@ func TestParse(t *testing.T) {
 				".a": Token{tokenType: String, Value: "1"},
 			},
 		},
-
 		{name: "{'a': '1', 'b': '2', 'c': 3}",
 			tokens: []Token{
 				{tokenType: LeftBrace, Value: "{"},
@@ -62,7 +72,6 @@ func TestParse(t *testing.T) {
 				".c": Token{tokenType: String, Value: "3"},
 			},
 		},
-
 		{name: "{'a': { 'b': { 'c': 3}}}",
 			tokens: []Token{
 				{tokenType: LeftBrace, Value: "{"},
@@ -84,6 +93,58 @@ func TestParse(t *testing.T) {
 			},
 		},
 
+		// arrays
+		{name: "['1', '2']",
+			tokens: []Token{
+				{tokenType: LeftBracket, Value: "["},
+				{tokenType: String, Value: "1"},
+				{tokenType: Comma, Value: ","},
+				{tokenType: String, Value: "2"},
+				{tokenType: RightBracket, Value: "]"},
+			},
+			expected: parsingResult{
+				".[0]": Token{tokenType: String, Value: "1"},
+				".[1]": Token{tokenType: String, Value: "2"},
+			},
+		},
+
+		{name: "['1', ['2']]",
+			tokens: []Token{
+				{tokenType: LeftBracket, Value: "["},
+				{tokenType: String, Value: "1"},
+				{tokenType: Comma, Value: ","},
+				{tokenType: LeftBracket, Value: "["},
+				{tokenType: String, Value: "2"},
+				{tokenType: RightBracket, Value: "]"},
+				{tokenType: RightBracket, Value: "]"},
+			},
+			expected: parsingResult{
+				".[0]":     Token{tokenType: String, Value: "1"},
+				".[1].[0]": Token{tokenType: String, Value: "2"},
+			},
+		},
+		{name: "{'a': [[[[[[1]]]]]]}",
+			tokens: []Token{
+				{tokenType: LeftBracket, Value: "["},
+				{tokenType: LeftBracket, Value: "["},
+				{tokenType: LeftBracket, Value: "["},
+				{tokenType: LeftBracket, Value: "["},
+				{tokenType: LeftBracket, Value: "["},
+				{tokenType: LeftBracket, Value: "["},
+				{tokenType: String, Value: "1"},
+				{tokenType: RightBracket, Value: "]"},
+				{tokenType: RightBracket, Value: "]"},
+				{tokenType: RightBracket, Value: "]"},
+				{tokenType: RightBracket, Value: "]"},
+				{tokenType: RightBracket, Value: "]"},
+				{tokenType: RightBracket, Value: "]"},
+			},
+			expected: parsingResult{
+				".[0].[0].[0].[0].[0].[0]": Token{tokenType: String, Value: "1"},
+			},
+		},
+
+		// mixed
 		{name: "{'a': ['1', '2']}",
 			tokens: []Token{
 				{tokenType: LeftBrace, Value: "{"},
@@ -249,6 +310,7 @@ func TestParse(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		//_ = tc.expected
 		t.Run(tc.name, func(t *testing.T) {
 			m := newCollectorMatcher()
 			p := newParser(tc.tokens, &m)
@@ -263,4 +325,75 @@ func TestParse(t *testing.T) {
 		})
 	}
 
+}
+
+func TestFailParse(t *testing.T) {
+	testCases := []struct {
+		name     string
+		tokens   []Token
+		expected string
+	}{
+		{name: "{",
+			tokens: []Token{
+				{tokenType: LeftBrace, Value: "{", line: 1, column: 1},
+			},
+			expected: "invalid JSON. unexpected token { found at line 1 column 1"},
+		{name: "{{",
+			tokens: []Token{
+				{tokenType: LeftBrace, Value: "{", line: 1, column: 1},
+				{tokenType: LeftBrace, Value: "{", line: 1, column: 2},
+			},
+			expected: "invalid JSON. unexpected token { found at line 1 column 2"},
+		{name: "{{{",
+			tokens: []Token{
+				{tokenType: LeftBrace, Value: "{", line: 1, column: 1},
+				{tokenType: LeftBrace, Value: "{", line: 1, column: 2},
+				{tokenType: LeftBrace, Value: "{", line: 1, column: 3},
+			},
+			expected: "invalid JSON. unexpected token { found at line 1 column 2"},
+		{name: "[",
+			tokens: []Token{
+				{tokenType: LeftBracket, Value: "[", line: 1, column: 1},
+			},
+			expected: "invalid JSON. unexpected token [ found at line 1 column 1"},
+		{name: "[[",
+			tokens: []Token{
+				{tokenType: LeftBracket, Value: "[", line: 1, column: 1},
+				{tokenType: LeftBracket, Value: "[", line: 1, column: 2},
+			},
+			expected: "invalid JSON. unexpected token [ found at line 1 column 2"},
+		{name: "[[[",
+			tokens: []Token{
+				{tokenType: LeftBracket, Value: "[", line: 1, column: 1},
+				{tokenType: LeftBracket, Value: "[", line: 1, column: 2},
+				{tokenType: LeftBracket, Value: "[", line: 1, column: 3},
+			},
+			expected: "invalid JSON. unexpected token [ found at line 1 column 3"},
+		{name: "{]",
+			tokens: []Token{
+				{tokenType: LeftBrace, Value: "{", line: 1, column: 1},
+				{tokenType: RightBracket, Value: "]", line: 1, column: 2},
+			},
+			expected: "invalid JSON. unexpected token ] found at line 1 column 2"},
+		{name: "[}",
+			tokens: []Token{
+				{tokenType: LeftBracket, Value: "[", line: 1, column: 1},
+				{tokenType: RightBrace, Value: "}", line: 1, column: 2},
+			},
+			expected: "invalid JSON. unexpected token } found at line 1 column 2"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			m := newCollectorMatcher()
+			p := newParser(tc.tokens, &m)
+			err := p.parse()
+
+			if err == nil {
+				t.Errorf("Expected error but input was parsed %v", m.collection)
+			} else if err.Error() != tc.expected {
+				t.Errorf("Expected '%s', got '%s' instead\n", tc.expected, err)
+			}
+		})
+	}
 }
