@@ -10,26 +10,37 @@ const (
 )
 
 type parsingContext struct {
-	path       string
-	elemsCount int
-	lastKey    string
-	_type      parsingType
+	path        string
+	elemsCount  int
+	key         string
+	_type       parsingType
+	pairScanned bool
 }
 
-func (p *parsingContext) setLastKey(key string) {
-	p.lastKey = fmt.Sprintf("%s.%s", p.path, key)
-}
-
-func (p *parsingContext) resetLastKey() {
-	p.lastKey = p.path
+func (p parsingContext) inObject() bool {
+	return p._type == Object
 }
 
 func (p parsingContext) inArray() bool {
 	return p._type == Array
 }
 
-func (p parsingContext) inObject() bool {
-	return p._type == Object
+func (p *parsingContext) setKey(key string) {
+	p.key = fmt.Sprintf("%s.%s", p.path, key)
+	p.pairScanned = false
+}
+
+func (p *parsingContext) isKeySet() bool {
+	return p.path != p.key
+}
+
+func (p *parsingContext) setValue() {
+	p.key = p.path
+	p.pairScanned = true
+}
+
+func (p *parsingContext) isPairScanned() bool {
+	return p.pairScanned
 }
 
 func (p parsingContext) arrayPath() string {
@@ -43,10 +54,11 @@ func (p *parsingContext) increaseElemsCount() {
 
 func newParsingContext(path string, pt parsingType) parsingContext {
 	return parsingContext{
-		path:       path,
-		lastKey:    path,
-		elemsCount: 0,
-		_type:      pt,
+		path:        path,
+		key:         path,
+		elemsCount:  0,
+		_type:       pt,
+		pairScanned: false,
 	}
 }
 

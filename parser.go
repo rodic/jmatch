@@ -1,6 +1,8 @@
 package jmatch
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type parser struct {
 	tokens  tokensList
@@ -22,116 +24,136 @@ func (p *parser) isValue(t Token) bool {
 	return t.IsString() || t.IsNumber() || t.IsBoolean() || t.IsNull()
 }
 
+func (p *parser) setUnexpectedEndOfInputErr() {
+	p.err = fmt.Errorf("invalid JSON. Unexpected end of JSON input")
+}
+
 func (p *parser) parseObject() {
-	currentToken, nextToken := p.tokens.current(), p.tokens.next()
-	if currentToken.IsRightBrace() {
-		p.context = p.stack.pop()
-	} else if currentToken.IsLeftBrace() && nextToken.IsRightBrace() {
-		// pass, will handle it in the next iteration
-	} else if currentToken.IsString() && nextToken.IsColon() { // key found
-		p.context.setLastKey(currentToken.Value)
-	} else if (currentToken.IsLeftBrace() || currentToken.IsComma()) && nextToken.IsString() {
-		// pass, covered in the previous case
-	} else if p.isValue(currentToken) && (nextToken.IsComma() || nextToken.IsRightBrace()) {
-		// pass, will catch later values by matching them against ':'
-	} else if currentToken.IsColon() {
-		if p.isValue(nextToken) {
-			p.matcher.Match(p.context.lastKey, nextToken)
-			p.context.resetLastKey()
-		} else if nextToken.IsLeftBrace() {
-			p.stack.push(p.context)
-			p.context = newParsingContext(p.context.lastKey, Object)
-		} else if nextToken.IsLeftBracket() {
-			newContextPath := p.context.lastKey
-			p.context.resetLastKey()
-			p.stack.push(p.context)
-			p.context = newParsingContext(newContextPath, Array)
-		} else {
-			p.err = fmt.Errorf("invalid JSON %s -> %s", currentToken.Value, nextToken.Value)
-		}
+	if p.tokens.current().IsRightBrace() {
+		p.context = p.stack.pop() // switch to previous context
 	} else {
-		p.err = fmt.Errorf("invalid JSON. unexpected token %s found at line %d column %d",
-			nextToken.Value, nextToken.line, nextToken.column)
+		current, next := p.tokens.current(), p.tokens.next()
+
+		if current.IsLeftBrace() && next.IsRightBrace() {
+			// pass
+		} else if current.IsComma() && !p.context.isPairScanned() {
+			p.err = current.toError()
+		} else if current.IsColon() && p.context.isPairScanned() {
+			p.err = current.toError()
+		} else if current.IsLeftBrace() || current.IsComma() {
+			if next.IsString() && !p.context.isKeySet() {
+				p.context.setKey(p.tokens.next().Value)
+				p.tokens.move()
+			} else {
+				p.err = next.toError()
+			}
+		} else if current.IsColon() && p.context.isKeySet() {
+
+			key := p.context.key
+			p.context.setValue()
+
+			if p.isValue(next) {
+				p.matcher.Match(key, next)
+				p.tokens.move()
+			} else if next.IsLeftBrace() {
+				p.stack.push(p.context)
+				p.context = newParsingContext(key, Object)
+			} else if next.IsLeftBracket() {
+				p.stack.push(p.context)
+				p.context = newParsingContext(key, Array)
+			} else {
+				p.err = next.toError()
+			}
+
+		} else {
+			p.err = next.toError()
+		}
 	}
 }
 
 func (p *parser) parseArray() {
-	currentToken, nextToken := p.tokens.current(), p.tokens.next()
-	if currentToken.IsRightBracket() {
-		p.context = p.stack.pop()
-	} else if currentToken.IsLeftBracket() || currentToken.IsComma() {
-		if p.isValue(nextToken) {
-			p.matcher.Match(p.context.arrayPath(), nextToken)
-			p.context.increaseElemsCount()
-		} else if nextToken.IsLeftBracket() {
-			newContextPath := p.context.arrayPath()
-			p.context.increaseElemsCount()
-			p.stack.push(p.context)
-			p.context = newParsingContext(newContextPath, Array)
-		} else if nextToken.IsLeftBrace() {
-			newContextPath := p.context.arrayPath()
-			p.context.increaseElemsCount()
-			p.stack.push(p.context)
-			p.context = newParsingContext(newContextPath, Object)
-		} else if nextToken.IsRightBracket() {
-			// pass will handle it in the next iteration
-		} else {
-			p.err = nextToken.toError()
-		}
-	} else if p.isValue(currentToken) && (nextToken.IsComma() || nextToken.IsRightBracket()) {
-		// pass, already parsed values, arrays and object when they are after comma or left bracket
+	if p.tokens.current().IsRightBracket() {
+		p.context = p.stack.pop() // switch to previous context
 	} else {
-		p.err = fmt.Errorf("invalid JSON %s -> %s", currentToken.Value, nextToken.Value)
+		current, next := p.tokens.current(), p.tokens.next()
+
+		if current.IsLeftBracket() && next.IsRightBracket() {
+			// pass
+		} else if current.IsLeftBracket() || current.IsComma() {
+
+			path := p.context.arrayPath()
+			p.context.increaseElemsCount()
+
+			if p.isValue(next) {
+				p.matcher.Match(path, next)
+				p.tokens.move()
+			} else if next.IsLeftBracket() {
+				p.stack.push(p.context)
+				p.context = newParsingContext(path, Array)
+			} else if next.IsLeftBrace() {
+				p.stack.push(p.context)
+				p.context = newParsingContext(path, Object)
+			} else {
+				p.err = next.toError()
+
+			}
+		} else {
+			p.err = current.toError()
+
+		}
+	}
+}
+
+func (p *parser) parseSingleton() {
+	current := p.tokens.current()
+	if !p.isValue(current) || p.tokens.hasNext() {
+		p.setUnexpectedEndOfInputErr()
+	} else {
+		p.matcher.Match(".", current)
 	}
 }
 
 func (p *parser) parse() error {
+
+	if p.tokens.empty() {
+		p.setUnexpectedEndOfInputErr()
+		return p.err
+	}
+
 	first := p.tokens.current()
 
-	if p.tokens.tokensCount == 1 {
-		if p.isValue(first) {
-			p.matcher.Match(".", first)
-			return nil
-		} else {
-			p.err = fmt.Errorf("invalid JSON. Unexpected end of JSON input")
-			return p.err
-		}
-	} else if first.IsLeftBrace() {
+	if first.IsLeftBrace() {
 		p.context = newParsingContext("", Object)
 	} else if first.IsLeftBracket() {
 		p.context = newParsingContext("", Array)
+	} else {
+		p.parseSingleton()
+		return p.err
 	}
 
 	parenCounter := newParenCounter()
 
-	for {
+	for p.tokens.hasNext() {
 		parenCounter.update(p.tokens.current())
 
 		if p.context.inObject() {
 			p.parseObject()
 		} else if p.context.inArray() {
 			p.parseArray()
-		} else {
-			p.err = fmt.Errorf("invalid JSON")
 		}
 
 		if p.err != nil {
 			return p.err
 		}
 
-		if p.tokens.hasTwoTokensLeft() {
-			p.tokens.move()
-		} else {
-			break
-		}
-
+		p.tokens.move()
 	}
 
-	last := p.tokens.next()
+	last := p.tokens.current()
 	parenCounter.update(last)
 
 	if !parenCounter.isBalanced() {
-		p.err = fmt.Errorf("invalid JSON. Unexpected end of JSON input")
+		p.setUnexpectedEndOfInputErr()
 	}
 
 	return p.err

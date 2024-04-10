@@ -94,12 +94,16 @@ func (t *tokensList) next() Token {
 	return t.tokens[t.currentId+1]
 }
 
-func (t *tokensList) hasTwoTokensLeft() bool {
-	return t.currentId < t.tokensCount-2
-}
-
 func (t *tokensList) move() {
 	t.currentId++
+}
+
+func (t *tokensList) empty() bool {
+	return t.tokensCount == 0
+}
+
+func (t *tokensList) hasNext() bool {
+	return t.currentId < t.tokensCount-1
 }
 
 func newTokens(tokens []Token) tokensList {
