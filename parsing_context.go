@@ -61,7 +61,6 @@ func newObjectContext(path string) *objectParsingContext {
 type arrayParsingContext struct {
 	path       string
 	elemsCount int
-	valueSet   bool
 }
 
 func (a *arrayParsingContext) isKeySet() bool {
@@ -72,18 +71,16 @@ func (a *arrayParsingContext) setKey(string) {
 	panic("unimplemented")
 }
 
+func (a *arrayParsingContext) isValueSet() bool {
+	panic("unimplemented")
+}
+
 func (a *arrayParsingContext) getPath() string {
 	return fmt.Sprintf("%s.[%d]", a.path, a.elemsCount)
 }
 
 func (a *arrayParsingContext) setValue() {
 	a.elemsCount++
-	a.valueSet = true
-}
-
-func (a *arrayParsingContext) isValueSet() bool {
-	// return a.valueSet
-	panic("unimplemented")
 }
 
 func (a *arrayParsingContext) isObject() bool {
@@ -98,7 +95,6 @@ func newArrayContext(path string) *arrayParsingContext {
 	return &arrayParsingContext{
 		path:       path,
 		elemsCount: 0,
-		valueSet:   false,
 	}
 }
 
