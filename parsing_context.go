@@ -9,15 +9,13 @@ type context interface {
 	isArray() bool
 
 	// only object use, refactor...
-	isValueSet() bool
 	setKey(string)
 	isKeySet() bool
 }
 
 type objectParsingContext struct {
-	path     string
-	key      string
-	valueSet bool
+	path string
+	key  string
 }
 
 func (o *objectParsingContext) isKeySet() bool {
@@ -26,7 +24,6 @@ func (o *objectParsingContext) isKeySet() bool {
 
 func (o *objectParsingContext) setKey(key string) {
 	o.key = fmt.Sprintf("%s.%s", o.path, key)
-	o.valueSet = false
 }
 
 func (o *objectParsingContext) getPath() string {
@@ -42,19 +39,13 @@ func (o *objectParsingContext) isObject() bool {
 }
 
 func (o *objectParsingContext) setValue() {
-	o.key = o.path // reset key to parent
-	o.valueSet = true
-}
-
-func (o *objectParsingContext) isValueSet() bool {
-	return o.valueSet
+	o.key = o.path
 }
 
 func newObjectContext(path string) *objectParsingContext {
 	return &objectParsingContext{
-		path:     path,
-		key:      path,
-		valueSet: false,
+		path: path,
+		key:  path,
 	}
 }
 
@@ -68,10 +59,6 @@ func (a *arrayParsingContext) isKeySet() bool {
 }
 
 func (a *arrayParsingContext) setKey(string) {
-	panic("unimplemented")
-}
-
-func (a *arrayParsingContext) isValueSet() bool {
 	panic("unimplemented")
 }
 

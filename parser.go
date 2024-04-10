@@ -48,9 +48,9 @@ func (p *parser) parseObject() {
 
 	if current.IsLeftBrace() && next.IsRightBrace() {
 		// pass
-	} else if current.IsComma() && !p.context.isValueSet() {
+	} else if current.IsComma() && p.context.isKeySet() {
 		p.err = current.toError()
-	} else if current.IsColon() && p.context.isValueSet() {
+	} else if current.IsColon() && !p.context.isKeySet() {
 		p.err = current.toError()
 	} else if current.IsLeftBrace() || current.IsComma() {
 		if next.IsString() && !p.context.isKeySet() {
