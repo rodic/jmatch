@@ -28,84 +28,90 @@ func (p *parser) setUnexpectedEndOfInputErr() {
 	p.err = fmt.Errorf("invalid JSON. Unexpected end of JSON input")
 }
 
-func (p *parser) parseObject() {
-	if p.tokens.current().IsRightBrace() {
-		if p.stack.isEmpty() {
-			p.setUnexpectedEndOfInputErr()
-			return
-		}
-		p.context = p.stack.pop() // switch to previous context
+func (p *parser) switchParsingContext() {
+	if p.stack.isEmpty() {
+		p.setUnexpectedEndOfInputErr()
 	} else {
-		current, next := p.tokens.current(), p.tokens.next()
+		p.context = p.stack.pop()
+	}
+}
 
-		if current.IsLeftBrace() && next.IsRightBrace() {
-			// pass
-		} else if current.IsComma() && !p.context.isValueSet() {
-			p.err = current.toError()
-		} else if current.IsColon() && p.context.isValueSet() {
-			p.err = current.toError()
-		} else if current.IsLeftBrace() || current.IsComma() {
-			if next.IsString() && !p.context.isKeySet() {
-				p.context.setKey(next.Value)
-				p.tokens.move()
-			} else {
-				p.err = next.toError()
-			}
-		} else if current.IsColon() {
-			path := p.context.getPath()
-			p.context.setValue()
+func (p *parser) parseObject() {
+	current := p.tokens.current()
 
-			if p.isValue(next) {
-				p.matcher.Match(path, next)
-				p.tokens.move()
-			} else if next.IsLeftBrace() {
-				p.stack.push(p.context)
-				p.context = newObjectContext(path)
-			} else if next.IsLeftBracket() {
-				p.stack.push(p.context)
-				p.context = newArrayContext(path)
-			} else {
-				p.err = next.toError()
-			}
+	if current.IsRightBrace() {
+		p.switchParsingContext()
+		return
+	}
+
+	next := p.tokens.next()
+
+	if current.IsLeftBrace() && next.IsRightBrace() {
+		// pass
+	} else if current.IsComma() && !p.context.isValueSet() {
+		p.err = current.toError()
+	} else if current.IsColon() && p.context.isValueSet() {
+		p.err = current.toError()
+	} else if current.IsLeftBrace() || current.IsComma() {
+		if next.IsString() && !p.context.isKeySet() {
+			p.context.setKey(next.Value)
+			p.tokens.move()
 		} else {
 			p.err = next.toError()
 		}
+	} else if current.IsColon() {
+		path := p.context.getPath()
+		p.context.setValue()
+
+		if p.isValue(next) {
+			p.matcher.Match(path, next)
+			p.tokens.move()
+		} else if next.IsLeftBrace() {
+			p.stack.push(p.context)
+			p.context = newObjectContext(path)
+		} else if next.IsLeftBracket() {
+			p.stack.push(p.context)
+			p.context = newArrayContext(path)
+		} else {
+			p.err = next.toError()
+		}
+	} else {
+		p.err = next.toError()
 	}
 }
 
 func (p *parser) parseArray() {
-	if p.tokens.current().IsRightBracket() {
-		if p.stack.isEmpty() {
-			p.setUnexpectedEndOfInputErr()
-			return
-		}
-		p.context = p.stack.pop() // switch to previous context
-	} else {
-		current, next := p.tokens.current(), p.tokens.next()
+	current := p.tokens.current()
 
-		if current.IsLeftBracket() && next.IsRightBracket() {
-			// pass
-		} else if current.IsLeftBracket() || current.IsComma() {
+	if current.IsRightBracket() {
+		p.switchParsingContext()
+		return
+	}
 
-			path := p.context.getPath()
-			p.context.setValue()
+	next := p.tokens.next()
 
-			if p.isValue(next) {
-				p.matcher.Match(path, next)
-				p.tokens.move()
-			} else if next.IsLeftBracket() {
-				p.stack.push(p.context)
-				p.context = newArrayContext(path)
-			} else if next.IsLeftBrace() {
-				p.stack.push(p.context)
-				p.context = newObjectContext(path)
-			} else {
-				p.err = next.toError()
-			}
+	if current.IsLeftBracket() && next.IsRightBracket() {
+		// pass
+	} else if current.IsLeftBracket() || current.IsComma() {
+
+		path := p.context.getPath()
+		p.context.setValue()
+
+		if p.isValue(next) {
+			p.matcher.Match(path, next)
+			p.tokens.move()
+		} else if next.IsLeftBracket() {
+			p.stack.push(p.context)
+			p.context = newArrayContext(path)
+		} else if next.IsLeftBrace() {
+			p.stack.push(p.context)
+			p.context = newObjectContext(path)
 		} else {
-			p.err = current.toError()
-
+			p.err = next.toError()
 		}
+	} else {
+		p.err = current.toError()
+
 	}
 }
 
