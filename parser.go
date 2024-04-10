@@ -36,9 +36,9 @@ func (p *parser) parseObject() {
 
 		if current.IsLeftBrace() && next.IsRightBrace() {
 			// pass
-		} else if current.IsComma() && !p.context.isPairScanned() {
+		} else if current.IsComma() && !p.context.isValueSet() {
 			p.err = current.toError()
-		} else if current.IsColon() && p.context.isPairScanned() {
+		} else if current.IsColon() && p.context.isValueSet() {
 			p.err = current.toError()
 		} else if current.IsLeftBrace() || current.IsComma() {
 			if next.IsString() && !p.context.isKeySet() {
@@ -49,18 +49,18 @@ func (p *parser) parseObject() {
 			}
 		} else if current.IsColon() && p.context.isKeySet() {
 
-			key := p.context.key
+			path := p.context.getPath()
 			p.context.setValue()
 
 			if p.isValue(next) {
-				p.matcher.Match(key, next)
+				p.matcher.Match(path, next)
 				p.tokens.move()
 			} else if next.IsLeftBrace() {
 				p.stack.push(p.context)
-				p.context = newParsingContext(key, Object)
+				p.context = newParsingContext(path, Object)
 			} else if next.IsLeftBracket() {
 				p.stack.push(p.context)
-				p.context = newParsingContext(key, Array)
+				p.context = newParsingContext(path, Array)
 			} else {
 				p.err = next.toError()
 			}
@@ -81,8 +81,8 @@ func (p *parser) parseArray() {
 			// pass
 		} else if current.IsLeftBracket() || current.IsComma() {
 
-			path := p.context.arrayPath()
-			p.context.increaseElemsCount()
+			path := p.context.getPath()
+			p.context.setValue()
 
 			if p.isValue(next) {
 				p.matcher.Match(path, next)
