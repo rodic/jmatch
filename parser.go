@@ -53,7 +53,7 @@ func (p *parser) parseObject() {
 	} else if current.IsColon() && !p.context.isKeySet() {
 		p.err = current.toError()
 	} else if current.IsLeftBrace() || current.IsComma() {
-		if next.IsString() && !p.context.isKeySet() {
+		if next.IsString() {
 			p.context.setKey(next.Value)
 			p.tokens.move()
 		} else {
