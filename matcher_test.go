@@ -1,58 +1,56 @@
 package jmatch
 
 import (
+	"os"
 	"reflect"
 	"testing"
 )
 
-type FixedTokenValueMatch struct {
-	matchingString string
-	matches        []string
+type CollectorMatcher struct {
+	matches []string
 }
 
-func (fm *FixedTokenValueMatch) Match(path string, token Token) {
-	if token.Value == fm.matchingString {
-		fm.matches = append(fm.matches, path)
-	}
+func (fm *CollectorMatcher) Match(path string, token Token) {
+	fm.matches = append(fm.matches, path)
 }
 
-func TestMatcher(t *testing.T) {
+func TestMatcherValid(t *testing.T) {
 	testCases := []struct {
 		name     string
-		json     string
-		expected []string
+		expected map[string]Token
 	}{
-		{name: "empty",
-			json:     "{}",
-			expected: []string{}},
-		{name: "simple match",
-			json:     "{\"a\": 1}",
-			expected: []string{".a"}},
-		{name: "multi",
-			json:     "{\"a\": 1, \"b\": 2, \"c\": 1}",
-			expected: []string{".a", ".c"}},
-		{name: "nested",
-			json:     "{\"a\": {\"b\": 1}}",
-			expected: []string{".a.b"}},
-		{name: "nested with arrays",
-			json:     "{\"a\": {\"b\": [0, 1, 2]}}",
-			expected: []string{".a.b.[1]"}},
+		{name: "testdata/valid/nested.json",
+			expected: map[string]Token{
+				".name":                    newToken(String, "Chris", 2, 13),
+				".age":                     newToken(Number, "23", 3, 12),
+				".address.city":            newToken(String, "New York", 5, 15),
+				".address.country":         newToken(String, "America", 6, 18),
+				".friends.[0].name":        newToken(String, "Emily", 10, 17),
+				".friends.[0].hobbies.[0]": newToken(String, "biking", 11, 22),
+				".friends.[0].hobbies.[1]": newToken(String, "music", 11, 32),
+				".friends.[0].hobbies.[2]": newToken(String, "gaming", 11, 41),
+				".friends.[1].name":        newToken(String, "John", 14, 17),
+				".friends.[1].hobbies.[0]": newToken(String, "soccer", 15, 22),
+				".friends.[1].hobbies.[1]": newToken(String, "gaming", 15, 32),
+			},
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			fm := FixedTokenValueMatch{
-				matchingString: "1",
-				matches:        make([]string, 0, 8),
-			}
-			_, err := Match(tc.json, &fm)
-
+			json, err := os.ReadFile(tc.name)
 			if err != nil {
-				t.Error(err)
+				t.Fatal(err)
 			}
 
-			if !reflect.DeepEqual(fm.matches, tc.expected) {
-				t.Errorf("Expected '%v', got '%v' instead\n", tc.expected, fm.matches)
+			collector := collectorMatcher{
+				collection: make(map[string]Token),
+			}
+
+			Match(string(json), &collector)
+
+			if !reflect.DeepEqual(collector.collection, tc.expected) {
+				t.Errorf("Expected '%v', got '%v' instead\n", tc.expected, collector.collection)
 			}
 		})
 	}

@@ -133,6 +133,7 @@ func (t *tokenizer) tokenize() ([]Token, error) {
 			digit := t.getNumber()
 			res = append(res, newToken(Number, digit, line, column))
 		case ' ':
+		case '\n':
 			continue
 		default:
 			text := t.getText()
