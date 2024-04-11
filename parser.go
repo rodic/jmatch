@@ -42,11 +42,11 @@ func (p *parser) parseObject() error {
 		return nil // pass
 	}
 	if current.IsComma() && p.context.isKeySet() {
-		return current.toError()
+		return current.asUnexpectedTokenErr()
 	}
 
 	if current.IsColon() && !p.context.isKeySet() {
-		return current.toError()
+		return current.asUnexpectedTokenErr()
 	}
 
 	if current.IsLeftBrace() || current.IsComma() {
@@ -55,7 +55,7 @@ func (p *parser) parseObject() error {
 			p.tokens.move()
 			return nil
 		} else {
-			return next.toError()
+			return next.asUnexpectedTokenErr()
 		}
 	}
 
@@ -73,12 +73,12 @@ func (p *parser) parseObject() error {
 			p.stack.push(p.context)
 			p.context = newArrayContext(path)
 		} else {
-			return next.toError()
+			return next.asUnexpectedTokenErr()
 		}
 
 		return nil
 	}
-	return next.toError()
+	return next.asUnexpectedTokenErr()
 }
 
 func (p *parser) parseArray() error {
@@ -109,11 +109,11 @@ func (p *parser) parseArray() error {
 			p.stack.push(p.context)
 			p.context = newObjectContext(path)
 		} else {
-			return next.toError()
+			return next.asUnexpectedTokenErr()
 		}
 		return nil
 	}
-	return current.toError()
+	return current.asUnexpectedTokenErr()
 }
 
 func (p *parser) parse() error {

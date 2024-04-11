@@ -1,7 +1,5 @@
 package jmatch
 
-import "fmt"
-
 type TokenType int
 
 type Token struct {
@@ -64,10 +62,8 @@ func (t Token) IsColon() bool {
 	return t.tokenType == Colon
 }
 
-func (t Token) toError() error {
-	return fmt.Errorf(
-		"invalid JSON. unexpected token %s found at line %d column %d",
-		t.Value, t.line, t.column)
+func (t Token) asUnexpectedTokenErr() UnexpectedTokenErr {
+	return UnexpectedTokenErr{token: t.Value, line: t.line, column: t.column}
 }
 
 func newToken(tokenType TokenType, value string, line int, column int) Token {

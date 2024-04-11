@@ -1,7 +1,6 @@
 package jmatch
 
 import (
-	"fmt"
 	"unicode"
 )
 
@@ -108,12 +107,12 @@ func (t *tokenizer) tokenize() ([]Token, error) {
 	res := make([]Token, 0, 8)
 
 	for !t.done() {
-		c := t.current()
+		current := t.current()
 
 		line := t.runePositionCounter.line
 		column := t.runePositionCounter.column
 
-		switch c {
+		switch current {
 		case '{':
 			res = append(res, newToken(LeftBrace, "{", line, column))
 		case '}':
@@ -143,13 +142,9 @@ func (t *tokenizer) tokenize() ([]Token, error) {
 			} else if text == "null" {
 				res = append(res, newToken(Null, text, line, column))
 			} else if text != "" {
-				return nil, fmt.Errorf(
-					"invalid JSON. unexpected token %s at line %d column %d", text, line, column,
-				)
+				return nil, UnexpectedTokenErr{token: text, line: line, column: column}
 			} else {
-				return nil, fmt.Errorf(
-					"invalid JSON. unexpected token %c at line %d column %d", c, line, column,
-				)
+				return nil, UnexpectedTokenErr{token: string(current), line: line, column: column}
 			}
 		}
 	}
