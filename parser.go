@@ -1,15 +1,10 @@
 package jmatch
 
-import (
-	"fmt"
-)
-
 type parser struct {
 	tokens  tokensList
 	context context
 	stack   contextStack
 	matcher Matcher
-	err     error
 }
 
 func newParser(tokens []Token, matcher Matcher) parser {
@@ -24,42 +19,47 @@ func (p *parser) isValue(t Token) bool {
 	return t.IsString() || t.IsNumber() || t.IsBoolean() || t.IsNull()
 }
 
-func (p *parser) setUnexpectedEndOfInputErr() {
-	p.err = fmt.Errorf("invalid JSON. Unexpected end of JSON input")
-}
-
-func (p *parser) switchParsingContext() {
+func (p *parser) switchParsingContext() error {
 	if p.stack.isEmpty() {
-		p.setUnexpectedEndOfInputErr()
-	} else {
-		p.context = p.stack.pop()
+		return UnexpectedEndOfInputErr{}
 	}
+
+	p.context = p.stack.pop()
+	return nil
 }
 
-func (p *parser) parseObject() {
+func (p *parser) parseObject() error {
 	current := p.tokens.current()
 
 	if current.IsRightBrace() {
 		p.switchParsingContext()
-		return
+		return nil
 	}
 
 	next := p.tokens.next()
 
 	if current.IsLeftBrace() && next.IsRightBrace() {
-		// pass
-	} else if current.IsComma() && p.context.isKeySet() {
-		p.err = current.toError()
-	} else if current.IsColon() && !p.context.isKeySet() {
-		p.err = current.toError()
-	} else if current.IsLeftBrace() || current.IsComma() {
+		return nil // pass
+	}
+	if current.IsComma() && p.context.isKeySet() {
+		return current.toError()
+	}
+
+	if current.IsColon() && !p.context.isKeySet() {
+		return current.toError()
+	}
+
+	if current.IsLeftBrace() || current.IsComma() {
 		if next.IsString() {
 			p.context.setKey(next.Value)
 			p.tokens.move()
+			return nil
 		} else {
-			p.err = next.toError()
+			return next.toError()
 		}
-	} else if current.IsColon() {
+	}
+
+	if current.IsColon() {
 		path := p.context.getPath()
 		p.context.setValue()
 
@@ -73,27 +73,29 @@ func (p *parser) parseObject() {
 			p.stack.push(p.context)
 			p.context = newArrayContext(path)
 		} else {
-			p.err = next.toError()
+			return next.toError()
 		}
-	} else {
-		p.err = next.toError()
+
+		return nil
 	}
+	return next.toError()
 }
 
-func (p *parser) parseArray() {
+func (p *parser) parseArray() error {
 	current := p.tokens.current()
 
 	if current.IsRightBracket() {
 		p.switchParsingContext()
-		return
+		return nil
 	}
 
 	next := p.tokens.next()
 
 	if current.IsLeftBracket() && next.IsRightBracket() {
-		// pass
-	} else if current.IsLeftBracket() || current.IsComma() {
+		return nil // pass
+	}
 
+	if current.IsLeftBracket() || current.IsComma() {
 		path := p.context.getPath()
 		p.context.setValue()
 
@@ -107,56 +109,52 @@ func (p *parser) parseArray() {
 			p.stack.push(p.context)
 			p.context = newObjectContext(path)
 		} else {
-			p.err = next.toError()
+			return next.toError()
 		}
-	} else {
-		p.err = current.toError()
-
+		return nil
 	}
-}
-
-func (p *parser) parseSingleton() {
-	current := p.tokens.current()
-	if !p.isValue(current) || p.tokens.hasNext() {
-		p.setUnexpectedEndOfInputErr()
-	} else {
-		p.matcher.Match(".", current)
-	}
+	return current.toError()
 }
 
 func (p *parser) parse() error {
 
 	if p.tokens.empty() {
-		p.setUnexpectedEndOfInputErr()
-		return p.err
+		return UnexpectedEndOfInputErr{}
 	}
 
 	first := p.tokens.current()
 
 	if first.IsLeftBrace() {
 		p.context = newObjectContext("")
+		return p.parseContext()
 	} else if first.IsLeftBracket() {
 		p.context = newArrayContext("")
+		return p.parseContext()
+	} else if p.isValue(first) && !p.tokens.hasNext() {
+		p.matcher.Match(".", first)
+		return nil
 	} else {
-		p.parseSingleton()
-		return p.err
+		return UnexpectedEndOfInputErr{}
 	}
+}
 
+func (p *parser) parseContext() error {
 	parenCounter := newParenCounter()
 
 	for p.tokens.hasNext() {
 		parenCounter.update(p.tokens.current())
 
 		if p.context.isObject() {
-			p.parseObject()
+			err := p.parseObject()
+			if err != nil {
+				return err
+			}
 		} else if p.context.isArray() {
-			p.parseArray()
+			err := p.parseArray()
+			if err != nil {
+				return err
+			}
 		}
-
-		if p.err != nil {
-			return p.err
-		}
-
 		p.tokens.move()
 	}
 
@@ -164,8 +162,8 @@ func (p *parser) parse() error {
 	parenCounter.update(last)
 
 	if !parenCounter.isBalanced() {
-		p.setUnexpectedEndOfInputErr()
+		return UnexpectedEndOfInputErr{}
 	}
 
-	return p.err
+	return nil
 }
