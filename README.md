@@ -94,14 +94,8 @@ func main() {
 
 ## TODO
 
-- improve text match to allow other characters beside letters
 - handle json with more complex keys {"a.b": 1}
-- improve error reporting
 - cmd tool
-- fixed match
-- excluding bools from matched text
-- regular expressions
-- numbers
 - streaming
 
 ## License
