@@ -7,7 +7,7 @@ import (
 )
 
 type parser struct {
-	tokens  t.TokenList
+	tokens  tokenList
 	context context
 	stack   contextStack
 	matcher m.Matcher
@@ -15,7 +15,7 @@ type parser struct {
 
 func NewParser(tokens []t.Token, matcher m.Matcher) parser {
 	return parser{
-		tokens:  t.NewTokens(tokens),
+		tokens:  NewTokens(tokens),
 		stack:   newContextStack(),
 		matcher: matcher,
 	}
@@ -35,14 +35,14 @@ func (p *parser) switchParsingContext() error {
 }
 
 func (p *parser) parseObject() error {
-	current := p.tokens.Current()
+	current := p.tokens.current()
 
 	if current.IsRightBrace() {
 		p.switchParsingContext()
 		return nil
 	}
 
-	next := p.tokens.Next()
+	next := p.tokens.next()
 
 	if current.IsLeftBrace() && next.IsRightBrace() {
 		return nil // pass
@@ -58,7 +58,7 @@ func (p *parser) parseObject() error {
 	if current.IsLeftBrace() || current.IsComma() {
 		if next.IsString() {
 			p.context.setKey(next.Value)
-			p.tokens.Move()
+			p.tokens.move()
 			return nil
 		} else {
 			return next.AsUnexpectedTokenErr()
@@ -71,7 +71,7 @@ func (p *parser) parseObject() error {
 
 		if p.isValue(next) {
 			p.matcher.Match(path, next)
-			p.tokens.Move()
+			p.tokens.move()
 		} else if next.IsLeftBrace() {
 			p.stack.push(p.context)
 			p.context = newObjectContext(path)
@@ -88,14 +88,14 @@ func (p *parser) parseObject() error {
 }
 
 func (p *parser) parseArray() error {
-	current := p.tokens.Current()
+	current := p.tokens.current()
 
 	if current.IsRightBracket() {
 		p.switchParsingContext()
 		return nil
 	}
 
-	next := p.tokens.Next()
+	next := p.tokens.next()
 
 	if current.IsLeftBracket() && next.IsRightBracket() {
 		return nil // pass
@@ -107,7 +107,7 @@ func (p *parser) parseArray() error {
 
 		if p.isValue(next) {
 			p.matcher.Match(path, next)
-			p.tokens.Move()
+			p.tokens.move()
 		} else if next.IsLeftBracket() {
 			p.stack.push(p.context)
 			p.context = newArrayContext(path)
@@ -125,8 +125,8 @@ func (p *parser) parseArray() error {
 func (p *parser) parseContext() error {
 	parenCounter := newParenCounter()
 
-	for p.tokens.HasNext() {
-		parenCounter.update(p.tokens.Current())
+	for p.tokens.hasNext() {
+		parenCounter.update(p.tokens.current())
 
 		if p.context.isObject() {
 			err := p.parseObject()
@@ -139,10 +139,10 @@ func (p *parser) parseContext() error {
 				return err
 			}
 		}
-		p.tokens.Move()
+		p.tokens.move()
 	}
 
-	last := p.tokens.Current()
+	last := p.tokens.current()
 	parenCounter.update(last)
 
 	if !parenCounter.isBalanced() {
@@ -154,11 +154,11 @@ func (p *parser) parseContext() error {
 
 func (p *parser) Parse() error {
 
-	if p.tokens.Empty() {
+	if p.tokens.empty() {
 		return c.UnexpectedEndOfInputErr{}
 	}
 
-	first := p.tokens.Current()
+	first := p.tokens.current()
 
 	if first.IsLeftBrace() {
 		p.context = newObjectContext("")
@@ -170,7 +170,7 @@ func (p *parser) Parse() error {
 		return p.parseContext()
 	}
 
-	if p.isValue(first) && !p.tokens.HasNext() {
+	if p.isValue(first) && !p.tokens.hasNext() {
 		p.matcher.Match(".", first)
 		return nil
 	}
