@@ -2,9 +2,9 @@ package tokenizer
 
 import "testing"
 
-func TestPositionCounter(t *testing.T) {
+func TestTextPositionCounter(t *testing.T) {
 
-	c := newRunePositionCounter()
+	c := newTextPositionCounter()
 
 	if c.line != 1 {
 		t.Errorf("Invalid initial line count")

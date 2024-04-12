@@ -11,7 +11,7 @@ type tokenizer struct {
 	input               []rune
 	inputLen            int
 	runePosition        int
-	runePositionCounter positionCounter
+	runePositionCounter textPositionCounter
 }
 
 func NewTokenizer(jInput string) tokenizer {
@@ -20,7 +20,7 @@ func NewTokenizer(jInput string) tokenizer {
 		input:               runes,
 		inputLen:            len(runes),
 		runePosition:        0,
-		runePositionCounter: newRunePositionCounter(),
+		runePositionCounter: newTextPositionCounter(),
 	}
 }
 
