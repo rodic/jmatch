@@ -1,7 +1,10 @@
-package jmatch
+package tokenizer
 
 import (
 	"unicode"
+
+	c "github.com/rodic/jmatch/common"
+	token "github.com/rodic/jmatch/token"
 )
 
 type tokenizer struct {
@@ -11,7 +14,7 @@ type tokenizer struct {
 	runePositionCounter positionCounter
 }
 
-func newTokenizer(jInput string) tokenizer {
+func NewTokenizer(jInput string) tokenizer {
 	runes := []rune(jInput)
 	return tokenizer{
 		input:               runes,
@@ -102,9 +105,9 @@ func (t *tokenizer) rewind() {
 	t.runePositionCounter.decreaseColumn()
 }
 
-func (t *tokenizer) tokenize() ([]Token, error) {
+func (t *tokenizer) Tokenize() ([]token.Token, error) {
 
-	res := make([]Token, 0, 8)
+	res := make([]token.Token, 0, 8)
 
 	for !t.done() {
 		current := t.current()
@@ -114,23 +117,23 @@ func (t *tokenizer) tokenize() ([]Token, error) {
 
 		switch current {
 		case '{':
-			res = append(res, newToken(LeftBrace, "{", line, column))
+			res = append(res, token.NewLeftBraceToken(line, column))
 		case '}':
-			res = append(res, newToken(RightBrace, "}", line, column))
+			res = append(res, token.NewRightBraceToken(line, column))
 		case '[':
-			res = append(res, newToken(LeftBracket, "[", line, column))
+			res = append(res, token.NewLeftBracketToken(line, column))
 		case ']':
-			res = append(res, newToken(RightBracket, "]", line, column))
+			res = append(res, token.NewRightBracketToken(line, column))
 		case ',':
-			res = append(res, newToken(Comma, ",", line, column))
+			res = append(res, token.NewCommaToken(line, column))
 		case '"':
 			str := t.getString()
-			res = append(res, newToken(String, str, line, column))
+			res = append(res, token.NewStringToken(str, line, column))
 		case ':':
-			res = append(res, newToken(Colon, ":", line, column))
+			res = append(res, token.NewColonToken(line, column))
 		case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 			digit := t.getNumber()
-			res = append(res, newToken(Number, digit, line, column))
+			res = append(res, token.NewNumberToken(digit, line, column))
 		case ' ':
 		case '\n':
 			continue
@@ -138,13 +141,13 @@ func (t *tokenizer) tokenize() ([]Token, error) {
 			text := t.getText()
 
 			if text == "true" || text == "false" {
-				res = append(res, newToken(Boolean, text, line, column))
+				res = append(res, token.NewBooleanToken(text, line, column))
 			} else if text == "null" {
-				res = append(res, newToken(Null, text, line, column))
+				res = append(res, token.NewNullToken(line, column))
 			} else if text != "" {
-				return nil, UnexpectedTokenErr{token: text, line: line, column: column}
+				return nil, c.UnexpectedTokenErr{Token: text, Line: line, Column: column}
 			} else {
-				return nil, UnexpectedTokenErr{token: string(current), line: line, column: column}
+				return nil, c.UnexpectedTokenErr{Token: string(current), Line: line, Column: column}
 			}
 		}
 	}

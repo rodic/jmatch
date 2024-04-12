@@ -1,19 +1,21 @@
 package jmatch
 
-type Matcher interface {
-	Match(path string, token Token)
-}
+import (
+	m "github.com/rodic/jmatch/matcher"
+	p "github.com/rodic/jmatch/parser"
+	t "github.com/rodic/jmatch/tokenizer"
+)
 
-func Match(json string, m Matcher) (Matcher, error) {
-	tokenizer := newTokenizer(json)
-	tokens, err := tokenizer.tokenize()
+func Match(json string, m m.Matcher) (m.Matcher, error) {
+	tokenizer := t.NewTokenizer(json)
+	tokens, err := tokenizer.Tokenize()
 
 	if err != nil {
 		return nil, err
 	}
 
-	parser := newParser(tokens, m)
-	err = parser.parse()
+	parser := p.NewParser(tokens, m)
+	err = parser.Parse()
 
 	if err != nil {
 		return nil, err

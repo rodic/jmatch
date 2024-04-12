@@ -1,4 +1,4 @@
-package jmatch
+package tokenizer
 
 import "testing"
 

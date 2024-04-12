@@ -1,4 +1,4 @@
-package jmatch
+package common
 
 import "fmt"
 
@@ -9,11 +9,11 @@ func (e UnexpectedEndOfInputErr) Error() string {
 }
 
 type UnexpectedTokenErr struct {
-	token  string
-	line   int
-	column int
+	Token  string
+	Line   int
+	Column int
 }
 
 func (e UnexpectedTokenErr) Error() string {
-	return fmt.Sprintf("invalid JSON. unexpected token %s at line %d column %d", e.token, e.line, e.column)
+	return fmt.Sprintf("invalid JSON. unexpected token %s at line %d column %d", e.Token, e.Line, e.Column)
 }

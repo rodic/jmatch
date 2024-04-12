@@ -1,11 +1,13 @@
-package jmatch
+package parser
+
+import t "github.com/rodic/jmatch/token"
 
 type parenCounter struct {
 	bracketCounter int
 	bracesCounter  int
 }
 
-func (p *parenCounter) update(t Token) {
+func (p *parenCounter) update(t t.Token) {
 	if t.IsLeftBrace() {
 		p.bracesCounter++
 	} else if t.IsRightBrace() {

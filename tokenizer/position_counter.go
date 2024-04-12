@@ -1,4 +1,4 @@
-package jmatch
+package tokenizer
 
 type positionCounter struct {
 	line   int
