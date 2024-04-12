@@ -59,6 +59,30 @@ func TestSuccessParse(t *testing.T) {
 				".a": token.NewStringToken("1", 1, 4),
 			},
 		},
+		{name: "{'a.b': '1'}",
+			tokens: []token.Token{
+				token.NewLeftBraceToken(1, 1),
+				token.NewStringToken("a.b", 1, 2),
+				token.NewColonToken(1, 3),
+				token.NewStringToken("1", 1, 4),
+				token.NewRightBraceToken(1, 5),
+			},
+			expected: parsingResult{
+				".\"a.b\"": token.NewStringToken("1", 1, 4),
+			},
+		},
+		{name: "{'a b': '1'}",
+			tokens: []token.Token{
+				token.NewLeftBraceToken(1, 1),
+				token.NewStringToken("a b", 1, 2),
+				token.NewColonToken(1, 3),
+				token.NewStringToken("1", 1, 4),
+				token.NewRightBraceToken(1, 5),
+			},
+			expected: parsingResult{
+				".\"a b\"": token.NewStringToken("1", 1, 4),
+			},
+		},
 		{name: "{'a': '1', 'b': '2', 'c': 3}",
 			tokens: []token.Token{
 				token.NewLeftBraceToken(1, 1),

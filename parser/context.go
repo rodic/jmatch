@@ -1,6 +1,9 @@
 package parser
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type context interface {
 	getPath() string
@@ -23,7 +26,11 @@ func (o *objectContext) isKeySet() bool {
 }
 
 func (o *objectContext) setKey(key string) {
-	o.key = fmt.Sprintf("%s.%s", o.path, key)
+	if strings.ContainsAny(key, " .") { // keys with . or space.
+		o.key = fmt.Sprintf("%s.\"%s\"", o.path, key)
+	} else {
+		o.key = fmt.Sprintf("%s.%s", o.path, key)
+	}
 }
 
 func (o *objectContext) getPath() string {
