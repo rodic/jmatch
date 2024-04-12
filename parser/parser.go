@@ -50,11 +50,9 @@ func (p *parser) parseObject() error {
 	if current.IsComma() && p.context.isKeySet() {
 		return current.AsUnexpectedTokenErr()
 	}
-
 	if current.IsColon() && !p.context.isKeySet() {
 		return current.AsUnexpectedTokenErr()
 	}
-
 	if current.IsLeftBrace() || current.IsComma() {
 		if next.IsString() {
 			p.context.setKey(next.Value)
@@ -64,7 +62,6 @@ func (p *parser) parseObject() error {
 			return next.AsUnexpectedTokenErr()
 		}
 	}
-
 	if current.IsColon() {
 		path := p.context.getPath()
 		p.context.setValue()
@@ -100,7 +97,6 @@ func (p *parser) parseArray() error {
 	if current.IsLeftBracket() && next.IsRightBracket() {
 		return nil // pass
 	}
-
 	if current.IsLeftBracket() || current.IsComma() {
 		path := p.context.getPath()
 		p.context.setValue()
@@ -164,12 +160,10 @@ func (p *parser) Parse() error {
 		p.context = newObjectContext("")
 		return p.parseContext()
 	}
-
 	if first.IsLeftBracket() {
-		p.context = newArrayContext("")
+		p.context = newArrayContext(".")
 		return p.parseContext()
 	}
-
 	if p.isValue(first) && !p.tokens.hasNext() {
 		p.matcher.Match(".", first)
 		return nil

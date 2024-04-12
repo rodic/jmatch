@@ -70,7 +70,7 @@ func (a *arrayContext) setKey(string) {
 }
 
 func (a *arrayContext) getPath() string {
-	return fmt.Sprintf("%s.[%d]", a.path, a.elemsCount)
+	return fmt.Sprintf("%s[%d]", a.path, a.elemsCount)
 }
 
 func (a *arrayContext) setValue() {
