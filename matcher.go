@@ -1,8 +1,6 @@
 package jmatch
 
 import (
-	"fmt"
-
 	m "github.com/rodic/jmatch/matcher"
 	p "github.com/rodic/jmatch/parser"
 	t "github.com/rodic/jmatch/token"
@@ -13,19 +11,12 @@ type Token = t.Token
 
 func Match(json string, m m.Matcher) error {
 
-	tokensChan := make(chan t.Token, 256)
+	tokenStream := make(chan t.Token)
 
-	tokenizer := z.NewTokenizer(json, tokensChan)
+	tokenizer := z.NewTokenizer(json, tokenStream)
 	go tokenizer.Tokenize()
 
-	tokens := make([]t.Token, 0, 32)
-
-	for t := range tokensChan {
-		fmt.Printf(">>>>>>>>>>> %v\n", t)
-		tokens = append(tokens, t)
-	}
-
-	parser := p.NewParser(tokens, m)
+	parser := p.NewParser(tokenStream, m)
 	err := parser.Parse()
 
 	if err != nil {

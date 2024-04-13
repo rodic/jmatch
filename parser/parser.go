@@ -13,9 +13,9 @@ type parser struct {
 	matcher m.Matcher
 }
 
-func NewParser(tokens []t.Token, matcher m.Matcher) parser {
+func NewParser(tokenStream <-chan t.Token, matcher m.Matcher) parser {
 	return parser{
-		tokens:  NewTokens(tokens),
+		tokens:  NewTokens(tokenStream),
 		stack:   newContextStack(),
 		matcher: matcher,
 	}
@@ -35,14 +35,14 @@ func (p *parser) switchParsingContext() error {
 }
 
 func (p *parser) parseObject() error {
-	current := p.tokens.current()
+	current := p.tokens.current
 
 	if current.IsRightBrace() {
 		p.switchParsingContext()
 		return nil
 	}
 
-	next := p.tokens.next()
+	next := p.tokens.next
 
 	if current.IsLeftBrace() && next.IsRightBrace() {
 		return nil // pass
@@ -85,14 +85,14 @@ func (p *parser) parseObject() error {
 }
 
 func (p *parser) parseArray() error {
-	current := p.tokens.current()
+	current := p.tokens.current
 
 	if current.IsRightBracket() {
 		p.switchParsingContext()
 		return nil
 	}
 
-	next := p.tokens.next()
+	next := p.tokens.next
 
 	if current.IsLeftBracket() && next.IsRightBracket() {
 		return nil // pass
@@ -121,8 +121,8 @@ func (p *parser) parseArray() error {
 func (p *parser) parseContext() error {
 	parenCounter := newParenCounter()
 
-	for p.tokens.hasNext() {
-		parenCounter.update(p.tokens.current())
+	for p.tokens.hasNext {
+		parenCounter.update(p.tokens.current)
 
 		if p.context.isObject() {
 			err := p.parseObject()
@@ -138,7 +138,7 @@ func (p *parser) parseContext() error {
 		p.tokens.move()
 	}
 
-	last := p.tokens.current()
+	last := p.tokens.current
 	parenCounter.update(last)
 
 	if !parenCounter.isBalanced() {
@@ -150,11 +150,11 @@ func (p *parser) parseContext() error {
 
 func (p *parser) Parse() error {
 
-	if p.tokens.empty() {
+	if !p.tokens.hasNext {
 		return c.UnexpectedEndOfInputErr{}
 	}
 
-	first := p.tokens.current()
+	first := p.tokens.current
 
 	if first.IsLeftBrace() {
 		p.context = newObjectContext("")
@@ -164,7 +164,7 @@ func (p *parser) Parse() error {
 		p.context = newArrayContext(".")
 		return p.parseContext()
 	}
-	if p.isValue(first) && !p.tokens.hasNext() {
+	if p.isValue(first) && !p.tokens.hasNext {
 		p.matcher.Match(".", first)
 		return nil
 	}

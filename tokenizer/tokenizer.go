@@ -12,7 +12,7 @@ type tokenizer struct {
 	inputLen            int
 	runePosition        int
 	runePositionCounter textPositionCounter
-	tokensChan          chan<- token.Token
+	tokenStream         chan<- token.Token
 }
 
 func NewTokenizer(jInput string, tokensChan chan<- token.Token) tokenizer {
@@ -22,7 +22,7 @@ func NewTokenizer(jInput string, tokensChan chan<- token.Token) tokenizer {
 		inputLen:            len(runes),
 		runePosition:        0,
 		runePositionCounter: newTextPositionCounter(),
-		tokensChan:          tokensChan,
+		tokenStream:         tokensChan,
 	}
 }
 
@@ -109,6 +109,8 @@ func (t *tokenizer) rewind() {
 
 func (t *tokenizer) Tokenize() error {
 
+	defer close(t.tokenStream)
+
 	for !t.done() {
 		current := t.current()
 
@@ -117,23 +119,23 @@ func (t *tokenizer) Tokenize() error {
 
 		switch current {
 		case '{':
-			t.tokensChan <- token.NewLeftBraceToken(line, column)
+			t.tokenStream <- token.NewLeftBraceToken(line, column)
 		case '}':
-			t.tokensChan <- token.NewRightBraceToken(line, column)
+			t.tokenStream <- token.NewRightBraceToken(line, column)
 		case '[':
-			t.tokensChan <- token.NewLeftBracketToken(line, column)
+			t.tokenStream <- token.NewLeftBracketToken(line, column)
 		case ']':
-			t.tokensChan <- token.NewRightBracketToken(line, column)
+			t.tokenStream <- token.NewRightBracketToken(line, column)
 		case ',':
-			t.tokensChan <- token.NewCommaToken(line, column)
+			t.tokenStream <- token.NewCommaToken(line, column)
 		case '"':
 			str := t.getString()
-			t.tokensChan <- token.NewStringToken(str, line, column)
+			t.tokenStream <- token.NewStringToken(str, line, column)
 		case ':':
-			t.tokensChan <- token.NewColonToken(line, column)
+			t.tokenStream <- token.NewColonToken(line, column)
 		case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 			digit := t.getNumber()
-			t.tokensChan <- token.NewNumberToken(digit, line, column)
+			t.tokenStream <- token.NewNumberToken(digit, line, column)
 		case ' ':
 		case '\n':
 			continue
@@ -141,9 +143,9 @@ func (t *tokenizer) Tokenize() error {
 			text := t.getText()
 
 			if text == "true" || text == "false" {
-				t.tokensChan <- token.NewBooleanToken(text, line, column)
+				t.tokenStream <- token.NewBooleanToken(text, line, column)
 			} else if text == "null" {
-				t.tokensChan <- token.NewNullToken(line, column)
+				t.tokenStream <- token.NewNullToken(line, column)
 			} else if text != "" {
 				return c.UnexpectedTokenErr{Token: text, Line: line, Column: column}
 			} else {
@@ -151,8 +153,6 @@ func (t *tokenizer) Tokenize() error {
 			}
 		}
 	}
-
-	close(t.tokensChan)
 
 	return nil
 }

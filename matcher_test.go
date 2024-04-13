@@ -21,6 +21,8 @@ func TestMatcherValid(t *testing.T) {
 		name     string
 		expected map[string]token.Token
 	}{
+		{name: "testdata/valid/empty.json",
+			expected: map[string]token.Token{}},
 		{name: "testdata/valid/nested.json",
 			expected: map[string]token.Token{
 				".name":                  token.NewStringToken("Chris", 2, 13),
