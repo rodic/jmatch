@@ -12,15 +12,17 @@ type tokenizer struct {
 	inputLen            int
 	runePosition        int
 	runePositionCounter textPositionCounter
+	tokensChan          chan<- token.Token
 }
 
-func NewTokenizer(jInput string) tokenizer {
+func NewTokenizer(jInput string, tokensChan chan<- token.Token) tokenizer {
 	runes := []rune(jInput)
 	return tokenizer{
 		input:               runes,
 		inputLen:            len(runes),
 		runePosition:        0,
 		runePositionCounter: newTextPositionCounter(),
+		tokensChan:          tokensChan,
 	}
 }
 
@@ -105,9 +107,7 @@ func (t *tokenizer) rewind() {
 	t.runePositionCounter.decreaseColumn()
 }
 
-func (t *tokenizer) Tokenize() ([]token.Token, error) {
-
-	res := make([]token.Token, 0, 8)
+func (t *tokenizer) Tokenize() error {
 
 	for !t.done() {
 		current := t.current()
@@ -117,23 +117,23 @@ func (t *tokenizer) Tokenize() ([]token.Token, error) {
 
 		switch current {
 		case '{':
-			res = append(res, token.NewLeftBraceToken(line, column))
+			t.tokensChan <- token.NewLeftBraceToken(line, column)
 		case '}':
-			res = append(res, token.NewRightBraceToken(line, column))
+			t.tokensChan <- token.NewRightBraceToken(line, column)
 		case '[':
-			res = append(res, token.NewLeftBracketToken(line, column))
+			t.tokensChan <- token.NewLeftBracketToken(line, column)
 		case ']':
-			res = append(res, token.NewRightBracketToken(line, column))
+			t.tokensChan <- token.NewRightBracketToken(line, column)
 		case ',':
-			res = append(res, token.NewCommaToken(line, column))
+			t.tokensChan <- token.NewCommaToken(line, column)
 		case '"':
 			str := t.getString()
-			res = append(res, token.NewStringToken(str, line, column))
+			t.tokensChan <- token.NewStringToken(str, line, column)
 		case ':':
-			res = append(res, token.NewColonToken(line, column))
+			t.tokensChan <- token.NewColonToken(line, column)
 		case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 			digit := t.getNumber()
-			res = append(res, token.NewNumberToken(digit, line, column))
+			t.tokensChan <- token.NewNumberToken(digit, line, column)
 		case ' ':
 		case '\n':
 			continue
@@ -141,16 +141,18 @@ func (t *tokenizer) Tokenize() ([]token.Token, error) {
 			text := t.getText()
 
 			if text == "true" || text == "false" {
-				res = append(res, token.NewBooleanToken(text, line, column))
+				t.tokensChan <- token.NewBooleanToken(text, line, column)
 			} else if text == "null" {
-				res = append(res, token.NewNullToken(line, column))
+				t.tokensChan <- token.NewNullToken(line, column)
 			} else if text != "" {
-				return nil, c.UnexpectedTokenErr{Token: text, Line: line, Column: column}
+				return c.UnexpectedTokenErr{Token: text, Line: line, Column: column}
 			} else {
-				return nil, c.UnexpectedTokenErr{Token: string(current), Line: line, Column: column}
+				return c.UnexpectedTokenErr{Token: string(current), Line: line, Column: column}
 			}
 		}
 	}
 
-	return res, nil
+	close(t.tokensChan)
+
+	return nil
 }
