@@ -9,14 +9,12 @@ import (
 
 type Token = t.Token
 
-func Match(json string, m m.Matcher) error {
+func Match(json string, matcher m.Matcher) error {
 
-	tokenStream := make(chan t.Token)
-
-	tokenizer := z.NewTokenizer(json, tokenStream)
+	tokenizer := z.NewTokenizer(json)
 	go tokenizer.Tokenize()
 
-	parser := p.NewParser(tokenStream, m)
+	parser := p.NewParser(tokenizer.GetTokenReadStream(), matcher)
 	err := parser.Parse()
 
 	if err != nil {

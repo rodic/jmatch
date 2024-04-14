@@ -11,18 +11,18 @@ type tokenizer struct {
 	input               []rune
 	inputLen            int
 	runePosition        int
-	runePositionCounter textPositionCounter
-	tokenStream         chan<- token.Token
+	textPositionCounter textPositionCounter
+	tokenStream         chan token.Token
 }
 
-func NewTokenizer(jInput string, tokensChan chan<- token.Token) tokenizer {
+func NewTokenizer(jInput string) tokenizer {
 	runes := []rune(jInput)
 	return tokenizer{
 		input:               runes,
 		inputLen:            len(runes),
 		runePosition:        0,
-		runePositionCounter: newTextPositionCounter(),
-		tokenStream:         tokensChan,
+		textPositionCounter: newTextPositionCounter(),
+		tokenStream:         make(chan token.Token),
 	}
 }
 
@@ -33,7 +33,7 @@ func (t *tokenizer) done() bool {
 func (t *tokenizer) current() rune {
 	r := t.input[t.runePosition]
 	t.move()
-	t.runePositionCounter.update(r)
+	t.textPositionCounter.update(r)
 	return r
 }
 
@@ -104,7 +104,11 @@ func (t *tokenizer) move() {
 
 func (t *tokenizer) rewind() {
 	t.runePosition--
-	t.runePositionCounter.decreaseColumn()
+	t.textPositionCounter.decreaseColumn()
+}
+
+func (t *tokenizer) GetTokenReadStream() <-chan token.Token {
+	return t.tokenStream
 }
 
 func (t *tokenizer) Tokenize() error {
@@ -114,8 +118,8 @@ func (t *tokenizer) Tokenize() error {
 	for !t.done() {
 		current := t.current()
 
-		line := t.runePositionCounter.line
-		column := t.runePositionCounter.column
+		line := t.textPositionCounter.line
+		column := t.textPositionCounter.column
 
 		switch current {
 		case '{':
