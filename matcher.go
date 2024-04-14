@@ -14,8 +14,13 @@ func Match(json string, matcher m.Matcher) error {
 	tokenizer := z.NewTokenizer(json)
 	go tokenizer.Tokenize()
 
-	parser := p.NewParser(tokenizer.GetTokenReadStream(), matcher)
-	err := parser.Parse()
+	parser, err := p.NewParser(tokenizer.GetTokenReadStream(), matcher)
+
+	if err != nil {
+		return err
+	}
+
+	err = parser.Parse()
 
 	if err != nil {
 		return err

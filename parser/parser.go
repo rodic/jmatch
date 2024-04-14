@@ -4,6 +4,7 @@ import (
 	c "github.com/rodic/jmatch/common"
 	m "github.com/rodic/jmatch/matcher"
 	t "github.com/rodic/jmatch/token"
+	z "github.com/rodic/jmatch/tokenizer"
 )
 
 type parser struct {
@@ -13,12 +14,20 @@ type parser struct {
 	matcher m.Matcher
 }
 
-func NewParser(tokenStream <-chan t.Token, matcher m.Matcher) parser {
-	return parser{
-		tokens:  NewTokens(tokenStream),
+func NewParser(tokenStream <-chan z.TokenResult, matcher m.Matcher) (*parser, error) {
+	tokens, err := NewTokens(tokenStream)
+
+	if err != nil {
+		return nil, err
+	}
+
+	parser := parser{
+		tokens:  *tokens,
 		stack:   newContextStack(),
 		matcher: matcher,
 	}
+
+	return &parser, nil
 }
 
 func (p *parser) isValue(t t.Token) bool {
@@ -56,8 +65,7 @@ func (p *parser) parseObject() error {
 	if current.IsLeftBrace() || current.IsComma() {
 		if next.IsString() {
 			p.context.setKey(next.Value)
-			p.tokens.move()
-			return nil
+			return p.tokens.move()
 		} else {
 			return next.AsUnexpectedTokenErr()
 		}
@@ -68,7 +76,7 @@ func (p *parser) parseObject() error {
 
 		if p.isValue(next) {
 			p.matcher.Match(path, next)
-			p.tokens.move()
+			return p.tokens.move()
 		} else if next.IsLeftBrace() {
 			p.stack.push(p.context)
 			p.context = newObjectContext(path)
@@ -103,7 +111,7 @@ func (p *parser) parseArray() error {
 
 		if p.isValue(next) {
 			p.matcher.Match(path, next)
-			p.tokens.move()
+			return p.tokens.move()
 		} else if next.IsLeftBracket() {
 			p.stack.push(p.context)
 			p.context = newArrayContext(path)
@@ -135,7 +143,11 @@ func (p *parser) parseContext() error {
 				return err
 			}
 		}
-		p.tokens.move()
+		err := p.tokens.move()
+
+		if err != nil {
+			return err
+		}
 	}
 
 	last := p.tokens.current
