@@ -1,14 +1,11 @@
 package parser
 
-import (
-	t "github.com/rodic/jmatch/token"
-	z "github.com/rodic/jmatch/tokenizer"
-)
+import z "github.com/rodic/jmatch/tokenizer"
 
 type tokenList struct {
 	tokensChan <-chan z.TokenResult
-	current    t.Token
-	next       t.Token
+	current    z.Token
+	next       z.Token
 	hasNext    bool
 }
 

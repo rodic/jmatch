@@ -1,6 +1,6 @@
 package parser
 
-import t "github.com/rodic/jmatch/token"
+import t "github.com/rodic/jmatch/tokenizer"
 
 type parenCounter struct {
 	bracketCounter int

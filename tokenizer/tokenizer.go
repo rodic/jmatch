@@ -4,11 +4,10 @@ import (
 	"unicode"
 
 	c "github.com/rodic/jmatch/common"
-	token "github.com/rodic/jmatch/token"
 )
 
 type TokenResult struct {
-	Token token.Token
+	Token Token
 	Error error
 }
 
@@ -116,7 +115,7 @@ func (t *tokenizer) GetTokenReadStream() <-chan TokenResult {
 	return t.tokenStream
 }
 
-func (t *tokenizer) writeTokenResult(token token.Token) {
+func (t *tokenizer) writeTokenResult(token Token) {
 	t.tokenStream <- TokenResult{Token: token, Error: nil}
 }
 
@@ -136,23 +135,23 @@ func (t *tokenizer) Tokenize() {
 
 		switch current {
 		case '{':
-			t.writeTokenResult(token.NewLeftBraceToken(line, column))
+			t.writeTokenResult(NewLeftBraceToken(line, column))
 		case '}':
-			t.writeTokenResult(token.NewRightBraceToken(line, column))
+			t.writeTokenResult(NewRightBraceToken(line, column))
 		case '[':
-			t.writeTokenResult(token.NewLeftBracketToken(line, column))
+			t.writeTokenResult(NewLeftBracketToken(line, column))
 		case ']':
-			t.writeTokenResult(token.NewRightBracketToken(line, column))
+			t.writeTokenResult(NewRightBracketToken(line, column))
 		case ',':
-			t.writeTokenResult(token.NewCommaToken(line, column))
+			t.writeTokenResult(NewCommaToken(line, column))
 		case '"':
 			str := t.getString()
-			t.writeTokenResult(token.NewStringToken(str, line, column))
+			t.writeTokenResult(NewStringToken(str, line, column))
 		case ':':
-			t.writeTokenResult(token.NewColonToken(line, column))
+			t.writeTokenResult(NewColonToken(line, column))
 		case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 			digit := t.getNumber()
-			t.writeTokenResult(token.NewNumberToken(digit, line, column))
+			t.writeTokenResult(NewNumberToken(digit, line, column))
 		case ' ':
 		case '\n':
 			continue
@@ -160,9 +159,9 @@ func (t *tokenizer) Tokenize() {
 			text := t.getText()
 
 			if text == "true" || text == "false" {
-				t.writeTokenResult(token.NewBooleanToken(text, line, column))
+				t.writeTokenResult(NewBooleanToken(text, line, column))
 			} else if text == "null" {
-				t.writeTokenResult(token.NewNullToken(line, column))
+				t.writeTokenResult(NewNullToken(line, column))
 			} else if text != "" {
 				t.writeError(c.UnexpectedTokenErr{Token: text, Line: line, Column: column})
 				return

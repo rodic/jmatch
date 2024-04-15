@@ -1,4 +1,4 @@
-package token
+package tokenizer
 
 import c "github.com/rodic/jmatch/common"
 

@@ -3,8 +3,7 @@ package jmatch
 import (
 	m "github.com/rodic/jmatch/matcher"
 	p "github.com/rodic/jmatch/parser"
-	t "github.com/rodic/jmatch/token"
-	z "github.com/rodic/jmatch/tokenizer"
+	t "github.com/rodic/jmatch/tokenizer"
 )
 
 type Token = t.Token
@@ -12,7 +11,7 @@ type Token = t.Token
 // tokenizer -> parser -> matcher
 func Match(json string, matcher m.Matcher) error {
 
-	tokenizer := z.NewTokenizer(json)
+	tokenizer := t.NewTokenizer(json)
 
 	go tokenizer.Tokenize()
 

@@ -2,8 +2,7 @@ package parser
 
 import (
 	c "github.com/rodic/jmatch/common"
-	t "github.com/rodic/jmatch/token"
-	z "github.com/rodic/jmatch/tokenizer"
+	t "github.com/rodic/jmatch/tokenizer"
 )
 
 type ParsingResult struct {
@@ -19,7 +18,7 @@ type parser struct {
 	resultStream chan ParsingResult
 }
 
-func NewParser(tokenStream <-chan z.TokenResult) (*parser, error) {
+func NewParser(tokenStream <-chan t.TokenResult) (*parser, error) {
 	tokens, err := NewTokens(tokenStream)
 
 	if err != nil {
