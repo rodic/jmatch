@@ -28,7 +28,7 @@ func (t *tokenList) move() error {
 }
 
 func NewTokens(tokensChan <-chan z.TokenResult) (*tokenList, error) {
-	currentResult, hasNext := <-tokensChan
+	currentResult, isOpen := <-tokensChan
 
 	if currentResult.Error != nil {
 		return nil, currentResult.Error
@@ -36,8 +36,8 @@ func NewTokens(tokensChan <-chan z.TokenResult) (*tokenList, error) {
 
 	var nextResult z.TokenResult
 
-	if hasNext {
-		nextResult, hasNext = <-tokensChan
+	if isOpen {
+		nextResult, isOpen = <-tokensChan
 
 		if nextResult.Error != nil {
 			return nil, nextResult.Error
@@ -48,7 +48,7 @@ func NewTokens(tokensChan <-chan z.TokenResult) (*tokenList, error) {
 		tokensChan: tokensChan,
 		current:    currentResult.Token,
 		next:       nextResult.Token,
-		hasNext:    hasNext,
+		hasNext:    isOpen,
 	}
 
 	return &tl, nil

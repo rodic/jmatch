@@ -9,6 +9,7 @@ import (
 
 type Token = t.Token
 
+// tokenizer -> parser -> matcher
 func Match(json string, matcher m.Matcher) error {
 
 	tokenizer := z.NewTokenizer(json)
@@ -23,7 +24,7 @@ func Match(json string, matcher m.Matcher) error {
 
 	go parser.Parse()
 
-	for parsingResult := range parser.GetResultStream() {
+	for parsingResult := range parser.GetResultReadStream() {
 
 		if parsingResult.Error != nil {
 			return parsingResult.Error

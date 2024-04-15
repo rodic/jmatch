@@ -165,10 +165,10 @@ func (t *tokenizer) Tokenize() {
 				t.writeTokenResult(token.NewNullToken(line, column))
 			} else if text != "" {
 				t.writeError(c.UnexpectedTokenErr{Token: text, Line: line, Column: column})
-				break
+				return
 			} else {
 				t.writeError(c.UnexpectedTokenErr{Token: string(current), Line: line, Column: column})
-				break
+				return
 			}
 		}
 	}

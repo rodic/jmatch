@@ -35,7 +35,7 @@ func NewParser(tokenStream <-chan z.TokenResult) (*parser, error) {
 	return &parser, nil
 }
 
-func (p *parser) GetResultStream() <-chan ParsingResult {
+func (p *parser) GetResultReadStream() <-chan ParsingResult {
 	return p.resultStream
 }
 
@@ -137,22 +137,22 @@ func (p *parser) parseArray() error {
 
 func (p *parser) parseContext() error {
 	parenCounter := newParenCounter()
+	var err error
 
 	for p.tokens.hasNext {
 		parenCounter.update(p.tokens.current)
 
 		if p.context.isObject() {
-			err := p.parseObject()
-			if err != nil {
-				return err
-			}
+			err = p.parseObject()
 		} else if p.context.isArray() {
-			err := p.parseArray()
-			if err != nil {
-				return err
-			}
+			err = p.parseArray()
 		}
-		err := p.tokens.move()
+
+		if err != nil {
+			return err
+		}
+
+		err = p.tokens.move()
 
 		if err != nil {
 			return err
@@ -174,31 +174,31 @@ func (p *parser) Parse() {
 
 	var err error
 
-	if !p.tokens.hasNext {
-		p.resultStream <- ParsingResult{Error: c.UnexpectedEndOfInputErr{}}
-		return
-	}
-
 	first := p.tokens.current
-
-	if first.IsLeftBrace() {
-		p.context = newObjectContext("")
-		err = p.parseContext()
-	}
-	if first.IsLeftBracket() {
-		p.context = newArrayContext(".")
-		err = p.parseContext()
-	}
-
-	if err != nil {
-		p.resultStream <- ParsingResult{Error: err}
-		return
-	}
 
 	if p.isValue(first) && !p.tokens.hasNext {
 		p.resultStream <- ParsingResult{Path: ".", Token: first}
 		return
 	}
 
-	p.resultStream <- ParsingResult{Error: c.UnexpectedEndOfInputErr{}}
+	if !(first.IsLeftBrace() || first.IsLeftBracket()) {
+		p.resultStream <- ParsingResult{Error: c.UnexpectedEndOfInputErr{}}
+		return
+	}
+
+	if first.IsLeftBrace() {
+		p.context = newObjectContext("")
+	}
+
+	if first.IsLeftBracket() {
+		p.context = newArrayContext(".")
+	}
+
+	err = p.parseContext()
+
+	if err != nil {
+		p.resultStream <- ParsingResult{Error: err}
+		return
+	}
+
 }
