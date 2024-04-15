@@ -2,19 +2,24 @@ package parser
 
 import (
 	c "github.com/rodic/jmatch/common"
-	m "github.com/rodic/jmatch/matcher"
 	t "github.com/rodic/jmatch/token"
 	z "github.com/rodic/jmatch/tokenizer"
 )
 
-type parser struct {
-	tokens  tokenList
-	context context
-	stack   contextStack
-	matcher m.Matcher
+type ParsingResult struct {
+	Path  string
+	Token t.Token
+	Error error
 }
 
-func NewParser(tokenStream <-chan z.TokenResult, matcher m.Matcher) (*parser, error) {
+type parser struct {
+	tokens       tokenList
+	context      context
+	stack        contextStack
+	resultStream chan ParsingResult
+}
+
+func NewParser(tokenStream <-chan z.TokenResult) (*parser, error) {
 	tokens, err := NewTokens(tokenStream)
 
 	if err != nil {
@@ -22,12 +27,16 @@ func NewParser(tokenStream <-chan z.TokenResult, matcher m.Matcher) (*parser, er
 	}
 
 	parser := parser{
-		tokens:  *tokens,
-		stack:   newContextStack(),
-		matcher: matcher,
+		tokens:       *tokens,
+		stack:        newContextStack(),
+		resultStream: make(chan ParsingResult),
 	}
 
 	return &parser, nil
+}
+
+func (p *parser) GetResultStream() <-chan ParsingResult {
+	return p.resultStream
 }
 
 func (p *parser) isValue(t t.Token) bool {
@@ -75,7 +84,7 @@ func (p *parser) parseObject() error {
 		p.context.setValue()
 
 		if p.isValue(next) {
-			p.matcher.Match(path, next)
+			p.resultStream <- ParsingResult{Path: path, Token: next}
 			return p.tokens.move()
 		} else if next.IsLeftBrace() {
 			p.stack.push(p.context)
@@ -110,7 +119,7 @@ func (p *parser) parseArray() error {
 		p.context.setValue()
 
 		if p.isValue(next) {
-			p.matcher.Match(path, next)
+			p.resultStream <- ParsingResult{Path: path, Token: next}
 			return p.tokens.move()
 		} else if next.IsLeftBracket() {
 			p.stack.push(p.context)
@@ -160,26 +169,36 @@ func (p *parser) parseContext() error {
 	return nil
 }
 
-func (p *parser) Parse() error {
+func (p *parser) Parse() {
+	defer close(p.resultStream)
+
+	var err error
 
 	if !p.tokens.hasNext {
-		return c.UnexpectedEndOfInputErr{}
+		p.resultStream <- ParsingResult{Error: c.UnexpectedEndOfInputErr{}}
+		return
 	}
 
 	first := p.tokens.current
 
 	if first.IsLeftBrace() {
 		p.context = newObjectContext("")
-		return p.parseContext()
+		err = p.parseContext()
 	}
 	if first.IsLeftBracket() {
 		p.context = newArrayContext(".")
-		return p.parseContext()
-	}
-	if p.isValue(first) && !p.tokens.hasNext {
-		p.matcher.Match(".", first)
-		return nil
+		err = p.parseContext()
 	}
 
-	return c.UnexpectedEndOfInputErr{}
+	if err != nil {
+		p.resultStream <- ParsingResult{Error: err}
+		return
+	}
+
+	if p.isValue(first) && !p.tokens.hasNext {
+		p.resultStream <- ParsingResult{Path: ".", Token: first}
+		return
+	}
+
+	p.resultStream <- ParsingResult{Error: c.UnexpectedEndOfInputErr{}}
 }

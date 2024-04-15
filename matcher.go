@@ -12,18 +12,24 @@ type Token = t.Token
 func Match(json string, matcher m.Matcher) error {
 
 	tokenizer := z.NewTokenizer(json)
+
 	go tokenizer.Tokenize()
 
-	parser, err := p.NewParser(tokenizer.GetTokenReadStream(), matcher)
+	parser, err := p.NewParser(tokenizer.GetTokenReadStream())
 
 	if err != nil {
 		return err
 	}
 
-	err = parser.Parse()
+	go parser.Parse()
 
-	if err != nil {
-		return err
+	for parsingResult := range parser.GetResultStream() {
+
+		if parsingResult.Error != nil {
+			return parsingResult.Error
+		}
+
+		matcher.Match(parsingResult.Path, parsingResult.Token)
 	}
 
 	return nil
