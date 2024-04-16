@@ -46,9 +46,9 @@ func main() {
 
 ## TODO
 
-- handle json with more complex keys {"a.b": 1}
+- initialize match with a reader instead of json string
+- improve integration tests with invalid inputs
 - cmd tool
-- streaming
 
 ## License
 
