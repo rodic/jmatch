@@ -1,39 +1,52 @@
 package parser
 
-import t "github.com/rodic/jmatch/token"
+import z "github.com/rodic/jmatch/tokenizer"
 
 type tokenList struct {
-	tokens      []t.Token
-	tokensCount int
-	currentId   int
-	nextId      int
+	tokensChan <-chan z.TokenResult
+	current    z.Token
+	next       z.Token
+	hasNext    bool
 }
 
-func (t *tokenList) current() t.Token {
-	return t.tokens[t.currentId]
-}
+func (t *tokenList) move() error {
+	var nextResult z.TokenResult
 
-func (t *tokenList) next() t.Token {
-	return t.tokens[t.currentId+1]
-}
+	nextResult, t.hasNext = <-t.tokensChan
 
-func (t *tokenList) move() {
-	t.currentId++
-}
-
-func (t *tokenList) empty() bool {
-	return t.tokensCount == 0
-}
-
-func (t *tokenList) hasNext() bool {
-	return t.currentId < t.tokensCount-1
-}
-
-func NewTokens(tokens []t.Token) tokenList {
-	return tokenList{
-		tokens:      tokens,
-		tokensCount: len(tokens),
-		currentId:   0,
-		nextId:      1,
+	if nextResult.Error != nil {
+		return nextResult.Error
 	}
+
+	t.current = t.next
+	t.next = nextResult.Token
+
+	return nil
+}
+
+func NewTokens(tokensChan <-chan z.TokenResult) (*tokenList, error) {
+	currentResult, isOpen := <-tokensChan
+
+	if currentResult.Error != nil {
+		return nil, currentResult.Error
+	}
+
+	var nextResult z.TokenResult
+
+	if isOpen {
+		nextResult, isOpen = <-tokensChan
+
+		if nextResult.Error != nil {
+			return nil, nextResult.Error
+		}
+	}
+
+	tl := tokenList{
+		tokensChan: tokensChan,
+		current:    currentResult.Token,
+		next:       nextResult.Token,
+		hasNext:    isOpen,
+	}
+
+	return &tl, nil
 }

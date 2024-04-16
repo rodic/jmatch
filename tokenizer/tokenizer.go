@@ -4,14 +4,19 @@ import (
 	"unicode"
 
 	c "github.com/rodic/jmatch/common"
-	token "github.com/rodic/jmatch/token"
 )
+
+type TokenResult struct {
+	Token Token
+	Error error
+}
 
 type tokenizer struct {
 	input               []rune
 	inputLen            int
 	runePosition        int
-	runePositionCounter textPositionCounter
+	textPositionCounter textPositionCounter
+	tokenStream         chan TokenResult
 }
 
 func NewTokenizer(jInput string) tokenizer {
@@ -20,7 +25,8 @@ func NewTokenizer(jInput string) tokenizer {
 		input:               runes,
 		inputLen:            len(runes),
 		runePosition:        0,
-		runePositionCounter: newTextPositionCounter(),
+		textPositionCounter: newTextPositionCounter(),
+		tokenStream:         make(chan TokenResult),
 	}
 }
 
@@ -31,7 +37,7 @@ func (t *tokenizer) done() bool {
 func (t *tokenizer) current() rune {
 	r := t.input[t.runePosition]
 	t.move()
-	t.runePositionCounter.update(r)
+	t.textPositionCounter.update(r)
 	return r
 }
 
@@ -102,38 +108,50 @@ func (t *tokenizer) move() {
 
 func (t *tokenizer) rewind() {
 	t.runePosition--
-	t.runePositionCounter.decreaseColumn()
+	t.textPositionCounter.decreaseColumn()
 }
 
-func (t *tokenizer) Tokenize() ([]token.Token, error) {
+func (t *tokenizer) GetTokenReadStream() <-chan TokenResult {
+	return t.tokenStream
+}
 
-	res := make([]token.Token, 0, 8)
+func (t *tokenizer) writeTokenResult(token Token) {
+	t.tokenStream <- TokenResult{Token: token, Error: nil}
+}
+
+func (t *tokenizer) writeError(err error) {
+	t.tokenStream <- TokenResult{Error: err}
+}
+
+func (t *tokenizer) Tokenize() {
+
+	defer close(t.tokenStream)
 
 	for !t.done() {
 		current := t.current()
 
-		line := t.runePositionCounter.line
-		column := t.runePositionCounter.column
+		line := t.textPositionCounter.line
+		column := t.textPositionCounter.column
 
 		switch current {
 		case '{':
-			res = append(res, token.NewLeftBraceToken(line, column))
+			t.writeTokenResult(NewLeftBraceToken(line, column))
 		case '}':
-			res = append(res, token.NewRightBraceToken(line, column))
+			t.writeTokenResult(NewRightBraceToken(line, column))
 		case '[':
-			res = append(res, token.NewLeftBracketToken(line, column))
+			t.writeTokenResult(NewLeftBracketToken(line, column))
 		case ']':
-			res = append(res, token.NewRightBracketToken(line, column))
+			t.writeTokenResult(NewRightBracketToken(line, column))
 		case ',':
-			res = append(res, token.NewCommaToken(line, column))
+			t.writeTokenResult(NewCommaToken(line, column))
 		case '"':
 			str := t.getString()
-			res = append(res, token.NewStringToken(str, line, column))
+			t.writeTokenResult(NewStringToken(str, line, column))
 		case ':':
-			res = append(res, token.NewColonToken(line, column))
+			t.writeTokenResult(NewColonToken(line, column))
 		case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 			digit := t.getNumber()
-			res = append(res, token.NewNumberToken(digit, line, column))
+			t.writeTokenResult(NewNumberToken(digit, line, column))
 		case ' ':
 		case '\n':
 			continue
@@ -141,16 +159,16 @@ func (t *tokenizer) Tokenize() ([]token.Token, error) {
 			text := t.getText()
 
 			if text == "true" || text == "false" {
-				res = append(res, token.NewBooleanToken(text, line, column))
+				t.writeTokenResult(NewBooleanToken(text, line, column))
 			} else if text == "null" {
-				res = append(res, token.NewNullToken(line, column))
+				t.writeTokenResult(NewNullToken(line, column))
 			} else if text != "" {
-				return nil, c.UnexpectedTokenErr{Token: text, Line: line, Column: column}
+				t.writeError(c.UnexpectedTokenErr{Token: text, Line: line, Column: column})
+				return
 			} else {
-				return nil, c.UnexpectedTokenErr{Token: string(current), Line: line, Column: column}
+				t.writeError(c.UnexpectedTokenErr{Token: string(current), Line: line, Column: column})
+				return
 			}
 		}
 	}
-
-	return res, nil
 }

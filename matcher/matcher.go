@@ -1,7 +1,7 @@
 package matcher
 
-import "github.com/rodic/jmatch/token"
+import t "github.com/rodic/jmatch/tokenizer"
 
 type Matcher interface {
-	Match(path string, token token.Token)
+	Match(path string, token t.Token)
 }

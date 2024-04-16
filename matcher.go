@@ -3,25 +3,33 @@ package jmatch
 import (
 	m "github.com/rodic/jmatch/matcher"
 	p "github.com/rodic/jmatch/parser"
-	t "github.com/rodic/jmatch/token"
-	z "github.com/rodic/jmatch/tokenizer"
+	t "github.com/rodic/jmatch/tokenizer"
 )
 
 type Token = t.Token
 
-func Match(json string, m m.Matcher) error {
-	tokenizer := z.NewTokenizer(json)
-	tokens, err := tokenizer.Tokenize()
+// tokenizer -> parser -> matcher
+func Match(json string, matcher m.Matcher) error {
+
+	tokenizer := t.NewTokenizer(json)
+
+	go tokenizer.Tokenize()
+
+	parser, err := p.NewParser(tokenizer.GetTokenReadStream())
 
 	if err != nil {
 		return err
 	}
 
-	parser := p.NewParser(tokens, m)
-	err = parser.Parse()
+	go parser.Parse()
 
-	if err != nil {
-		return err
+	for parsingResult := range parser.GetResultReadStream() {
+
+		if parsingResult.Error != nil {
+			return parsingResult.Error
+		}
+
+		matcher.Match(parsingResult.Path, parsingResult.Token)
 	}
 
 	return nil

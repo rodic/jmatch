@@ -2,23 +2,40 @@ package parser
 
 import (
 	c "github.com/rodic/jmatch/common"
-	m "github.com/rodic/jmatch/matcher"
-	t "github.com/rodic/jmatch/token"
+	t "github.com/rodic/jmatch/tokenizer"
 )
 
-type parser struct {
-	tokens  tokenList
-	context context
-	stack   contextStack
-	matcher m.Matcher
+type ParsingResult struct {
+	Path  string
+	Token t.Token
+	Error error
 }
 
-func NewParser(tokens []t.Token, matcher m.Matcher) parser {
-	return parser{
-		tokens:  NewTokens(tokens),
-		stack:   newContextStack(),
-		matcher: matcher,
+type parser struct {
+	tokens       tokenList
+	context      context
+	stack        contextStack
+	resultStream chan ParsingResult
+}
+
+func NewParser(tokenStream <-chan t.TokenResult) (*parser, error) {
+	tokens, err := NewTokens(tokenStream)
+
+	if err != nil {
+		return nil, err
 	}
+
+	parser := parser{
+		tokens:       *tokens,
+		stack:        newContextStack(),
+		resultStream: make(chan ParsingResult),
+	}
+
+	return &parser, nil
+}
+
+func (p *parser) GetResultReadStream() <-chan ParsingResult {
+	return p.resultStream
 }
 
 func (p *parser) isValue(t t.Token) bool {
@@ -35,14 +52,14 @@ func (p *parser) switchParsingContext() error {
 }
 
 func (p *parser) parseObject() error {
-	current := p.tokens.current()
+	current := p.tokens.current
 
 	if current.IsRightBrace() {
 		p.switchParsingContext()
 		return nil
 	}
 
-	next := p.tokens.next()
+	next := p.tokens.next
 
 	if current.IsLeftBrace() && next.IsRightBrace() {
 		return nil // pass
@@ -56,8 +73,7 @@ func (p *parser) parseObject() error {
 	if current.IsLeftBrace() || current.IsComma() {
 		if next.IsString() {
 			p.context.setKey(next.Value)
-			p.tokens.move()
-			return nil
+			return p.tokens.move()
 		} else {
 			return next.AsUnexpectedTokenErr()
 		}
@@ -67,8 +83,8 @@ func (p *parser) parseObject() error {
 		p.context.setValue()
 
 		if p.isValue(next) {
-			p.matcher.Match(path, next)
-			p.tokens.move()
+			p.resultStream <- ParsingResult{Path: path, Token: next}
+			return p.tokens.move()
 		} else if next.IsLeftBrace() {
 			p.stack.push(p.context)
 			p.context = newObjectContext(path)
@@ -85,14 +101,14 @@ func (p *parser) parseObject() error {
 }
 
 func (p *parser) parseArray() error {
-	current := p.tokens.current()
+	current := p.tokens.current
 
 	if current.IsRightBracket() {
 		p.switchParsingContext()
 		return nil
 	}
 
-	next := p.tokens.next()
+	next := p.tokens.next
 
 	if current.IsLeftBracket() && next.IsRightBracket() {
 		return nil // pass
@@ -102,8 +118,8 @@ func (p *parser) parseArray() error {
 		p.context.setValue()
 
 		if p.isValue(next) {
-			p.matcher.Match(path, next)
-			p.tokens.move()
+			p.resultStream <- ParsingResult{Path: path, Token: next}
+			return p.tokens.move()
 		} else if next.IsLeftBracket() {
 			p.stack.push(p.context)
 			p.context = newArrayContext(path)
@@ -120,25 +136,29 @@ func (p *parser) parseArray() error {
 
 func (p *parser) parseContext() error {
 	parenCounter := newParenCounter()
+	var err error
 
-	for p.tokens.hasNext() {
-		parenCounter.update(p.tokens.current())
+	for p.tokens.hasNext {
+		parenCounter.update(p.tokens.current)
 
 		if p.context.isObject() {
-			err := p.parseObject()
-			if err != nil {
-				return err
-			}
+			err = p.parseObject()
 		} else if p.context.isArray() {
-			err := p.parseArray()
-			if err != nil {
-				return err
-			}
+			err = p.parseArray()
 		}
-		p.tokens.move()
+
+		if err != nil {
+			return err
+		}
+
+		err = p.tokens.move()
+
+		if err != nil {
+			return err
+		}
 	}
 
-	last := p.tokens.current()
+	last := p.tokens.current
 	parenCounter.update(last)
 
 	if !parenCounter.isBalanced() {
@@ -148,26 +168,36 @@ func (p *parser) parseContext() error {
 	return nil
 }
 
-func (p *parser) Parse() error {
+func (p *parser) Parse() {
+	defer close(p.resultStream)
 
-	if p.tokens.empty() {
-		return c.UnexpectedEndOfInputErr{}
+	var err error
+
+	first := p.tokens.current
+
+	if p.isValue(first) && !p.tokens.hasNext {
+		p.resultStream <- ParsingResult{Path: ".", Token: first}
+		return
 	}
 
-	first := p.tokens.current()
+	if !(first.IsLeftBrace() || first.IsLeftBracket()) {
+		p.resultStream <- ParsingResult{Error: c.UnexpectedEndOfInputErr{}}
+		return
+	}
 
 	if first.IsLeftBrace() {
 		p.context = newObjectContext("")
-		return p.parseContext()
-	}
-	if first.IsLeftBracket() {
-		p.context = newArrayContext(".")
-		return p.parseContext()
-	}
-	if p.isValue(first) && !p.tokens.hasNext() {
-		p.matcher.Match(".", first)
-		return nil
 	}
 
-	return c.UnexpectedEndOfInputErr{}
+	if first.IsLeftBracket() {
+		p.context = newArrayContext(".")
+	}
+
+	err = p.parseContext()
+
+	if err != nil {
+		p.resultStream <- ParsingResult{Error: err}
+		return
+	}
+
 }
