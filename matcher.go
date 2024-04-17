@@ -3,15 +3,16 @@ package jmatch
 import (
 	"io"
 
-	m "github.com/rodic/jmatch/matcher"
 	p "github.com/rodic/jmatch/parser"
 	t "github.com/rodic/jmatch/tokenizer"
 )
 
 type Token = t.Token
 
+type Matcher func(path string, token t.Token)
+
 // tokenizer -> parser -> matcher
-func Match(reader io.Reader, matcher m.Matcher) error {
+func Match(reader io.Reader, matcher Matcher) error {
 
 	tokenizer := t.NewTokenizer(reader)
 
@@ -31,7 +32,7 @@ func Match(reader io.Reader, matcher m.Matcher) error {
 			return parsingResult.Error
 		}
 
-		matcher.Match(parsingResult.Path, parsingResult.Token)
+		matcher(parsingResult.Path, parsingResult.Token)
 	}
 
 	return nil

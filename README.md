@@ -5,9 +5,7 @@ The `jmatch` library is designed to parse and process JSON data in Go.
 It provides a `Match` function that can be invoked with an instance of `io.Reader` containing JSON data and a match function that implements the `Matcher` interface.
 
 ```go
-type Matcher interface {
-	Match(path string, token t.Token)
-}
+type Matcher func(path string, token t.Token)
 ```
 
 params for match functions are:
@@ -40,35 +38,24 @@ import (
 	"github.com/rodic/jmatch"
 )
 
-type FixedTokenValueMatch struct {
-	matchingString string
-	matches        []string
-}
-
-func (fm *FixedTokenValueMatch) Match(path string, token jmatch.Token) {
-	if token.IsNumber() && token.Value == fm.matchingString {
-		fm.matches = append(fm.matches, path)
+func matcher(path string, token jmatch.Token) {
+	if token.Value == "2" && token.IsNumber() {
+		fmt.Println(path)
 	}
 }
 
 func main() {
 
-	fm := FixedTokenValueMatch{
-		matchingString: "2",
-		matches:        make([]string, 0, 8),
-	}
-
 	jsonReader := strings.NewReader("{\"a\": {\"b.c\": [\"2\", 2]}}")
 
-	err := jmatch.Match(jsonReader, &fm)
+	err := jmatch.Match(jsonReader, matcher)
 
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
-	// [.a."b.c"[1]] only snd elem matches since the first is string
-	fmt.Printf("%v\n", fm.matches)
+	// Prints [.a."b.c"[1]] only snd elem matches since the first is string
 }
 ```
 

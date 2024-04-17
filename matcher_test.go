@@ -154,7 +154,7 @@ func TestMatcherValid(t *testing.T) {
 				matches: make(map[string]z.Token),
 			}
 
-			Match(file, &collector)
+			Match(file, collector.Match)
 
 			if !reflect.DeepEqual(collector.matches, tc.expected) {
 				t.Errorf("Expected '%v', got '%v' instead\n", tc.expected, collector.matches)
