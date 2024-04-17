@@ -1,6 +1,8 @@
 package tokenizer
 
 import (
+	"fmt"
+	"io"
 	"unicode"
 
 	c "github.com/rodic/jmatch/common"
@@ -12,107 +14,89 @@ type TokenResult struct {
 }
 
 type tokenizer struct {
-	input               []rune
-	inputLen            int
-	runePosition        int
-	textPositionCounter textPositionCounter
-	tokenStream         chan TokenResult
+	runes       RuneReader
+	tokenStream chan TokenResult
 }
 
-func NewTokenizer(jInput string) tokenizer {
-	runes := []rune(jInput)
+func NewTokenizer(r io.Reader) tokenizer {
 	return tokenizer{
-		input:               runes,
-		inputLen:            len(runes),
-		runePosition:        0,
-		textPositionCounter: newTextPositionCounter(),
-		tokenStream:         make(chan TokenResult),
+		runes:       NewRuneReader(r),
+		tokenStream: make(chan TokenResult),
 	}
-}
-
-func (t *tokenizer) done() bool {
-	return t.runePosition >= t.inputLen
-}
-
-func (t *tokenizer) current() rune {
-	r := t.input[t.runePosition]
-	t.move()
-	t.textPositionCounter.update(r)
-	return r
-}
-
-func (t *tokenizer) getString() string {
-	res := []rune{}
-
-	for {
-		c := t.current()
-
-		if c == '"' {
-			break
-		}
-		res = append(res, c)
-	}
-	return string(res)
-}
-
-func (t *tokenizer) getNumber() string {
-	res := []rune{}
-	dotCount := 0 // one dot in num is allowed
-	isFirst := true
-
-	t.rewind()
-
-	for {
-		c := t.current()
-
-		if c == '.' {
-			dotCount += 1
-		}
-
-		isMinus := c == '-' && isFirst
-		isDigit := unicode.IsDigit(c)
-		isDot := c == '.' && dotCount <= 1 && !isFirst
-
-		isFirst = false
-
-		if isMinus || isDigit || isDot {
-			res = append(res, c)
-		} else {
-			t.rewind()
-			break
-		}
-	}
-	return string(res)
-}
-
-func (t *tokenizer) getText() string {
-	res := []rune{}
-	t.rewind()
-
-	for {
-		c := t.current()
-
-		if unicode.IsLetter(c) {
-			res = append(res, c)
-		} else {
-			t.rewind()
-			break
-		}
-	}
-	return string(res)
-}
-
-func (t *tokenizer) move() {
-	t.runePosition++
-}
-
-func (t *tokenizer) rewind() {
-	t.runePosition--
-	t.textPositionCounter.decreaseColumn()
 }
 
 func (t *tokenizer) GetTokenReadStream() <-chan TokenResult {
 	return t.tokenStream
+}
+
+func (t *tokenizer) getString() (string, error) {
+	res := []rune{}
+
+	if err := t.runes.move(); err != nil {
+		return "", err
+	}
+
+	for {
+		if t.runes.current == '"' {
+			break
+		}
+		res = append(res, t.runes.current)
+
+		if err := t.runes.move(); err != nil {
+			return "", err
+		}
+	}
+	return string(res), nil
+}
+
+func (t *tokenizer) getNumber() (string, error) {
+	res := []rune{t.runes.current}
+
+	dotCount := 0
+	isDigitSet := t.runes.current != '-'
+
+	for {
+		if err := t.runes.move(); err != nil {
+			return "", err
+		}
+
+		if unicode.IsDigit(t.runes.current) {
+			isDigitSet = true
+			res = append(res, t.runes.current)
+		} else if t.runes.current == '.' && dotCount == 0 && isDigitSet {
+			dotCount++
+			res = append(res, t.runes.current)
+		} else {
+			t.runes.rewind()
+			break
+		}
+	}
+
+	// if unexpected end of number
+	if !unicode.IsDigit(t.runes.current) {
+		t.runes.move()
+		return string(t.runes.current), fmt.Errorf("invalid number")
+	}
+
+	return string(res), nil
+}
+
+func (t *tokenizer) getText() (string, error) {
+	res := []rune{t.runes.current}
+
+	for {
+		if err := t.runes.move(); err != nil {
+			return "", err
+		}
+
+		if unicode.IsLetter(t.runes.current) {
+			res = append(res, t.runes.current)
+		} else {
+			t.runes.rewind()
+			break
+		}
+	}
+	return string(res), nil
 }
 
 func (t *tokenizer) writeTokenResult(token Token) {
@@ -127,13 +111,22 @@ func (t *tokenizer) Tokenize() {
 
 	defer close(t.tokenStream)
 
-	for !t.done() {
-		current := t.current()
+	for {
+		t.runes.move()
 
-		line := t.textPositionCounter.line
-		column := t.textPositionCounter.column
+		if t.runes.done {
+			break
+		}
+
+		current := t.runes.current
+
+		line := t.runes.line
+		column := t.runes.column
 
 		switch current {
+		case ' ':
+		case '\n':
+			continue
 		case '{':
 			t.writeTokenResult(NewLeftBraceToken(line, column))
 		case '}':
@@ -144,29 +137,38 @@ func (t *tokenizer) Tokenize() {
 			t.writeTokenResult(NewRightBracketToken(line, column))
 		case ',':
 			t.writeTokenResult(NewCommaToken(line, column))
-		case '"':
-			str := t.getString()
-			t.writeTokenResult(NewStringToken(str, line, column))
 		case ':':
 			t.writeTokenResult(NewColonToken(line, column))
+		case '"':
+			str, err := t.getString()
+			if err == nil {
+				t.writeTokenResult(NewStringToken(str, line, column))
+			} else {
+				t.writeError(err)
+				return
+			}
 		case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
-			digit := t.getNumber()
-			t.writeTokenResult(NewNumberToken(digit, line, column))
-		case ' ':
-		case '\n':
-			continue
+			digit, err := t.getNumber()
+			if err == nil {
+				t.writeTokenResult(NewNumberToken(digit, line, column))
+			} else {
+				t.writeError(c.UnexpectedTokenErr{Token: digit, Line: t.runes.line, Column: t.runes.column})
+				return
+			}
 		default:
-			text := t.getText()
+			text, err := t.getText()
+
+			if err != nil {
+				t.writeError(err)
+				return
+			}
 
 			if text == "true" || text == "false" {
 				t.writeTokenResult(NewBooleanToken(text, line, column))
 			} else if text == "null" {
 				t.writeTokenResult(NewNullToken(line, column))
-			} else if text != "" {
-				t.writeError(c.UnexpectedTokenErr{Token: text, Line: line, Column: column})
-				return
 			} else {
-				t.writeError(c.UnexpectedTokenErr{Token: string(current), Line: line, Column: column})
+				t.writeError(c.UnexpectedTokenErr{Token: text, Line: line, Column: column})
 				return
 			}
 		}

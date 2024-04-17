@@ -1,34 +1,34 @@
 package tokenizer
 
 type textPositionCounter struct {
-	line   int
-	column int
+	line           int
+	column         int
+	lastLineColumn int
 }
 
-func (p *textPositionCounter) increaseLine() {
-	p.line++
-	p.column = 0
-}
-
-func (p *textPositionCounter) increaseColumn() {
-	p.column++
-}
-
-func (p *textPositionCounter) decreaseColumn() {
-	p.column--
-}
-
-func (p *textPositionCounter) update(r rune) {
+func (p *textPositionCounter) increase(r rune) {
 	if r == '\n' {
-		p.increaseLine()
+		p.line++
+		p.lastLineColumn = p.column
+		p.column = 0
 	} else {
-		p.increaseColumn()
+		p.column++
+	}
+}
+
+func (p *textPositionCounter) decrease(r rune) {
+	if r == '\n' {
+		p.line--
+		p.column = p.lastLineColumn
+	} else {
+		p.column--
 	}
 }
 
 func newTextPositionCounter() textPositionCounter {
 	return textPositionCounter{
-		line:   1,
-		column: 0,
+		line:           1,
+		column:         0,
+		lastLineColumn: 0,
 	}
 }

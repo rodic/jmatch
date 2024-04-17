@@ -122,38 +122,39 @@ func TestMatcherValid(t *testing.T) {
 				".items[0].etag":                              z.NewStringToken("QCsHBifbaernVCbLv8Cu6rAeaDQ", 10, 17),
 				".items[0].id.kind":                           z.NewStringToken("youtube#video", 11, 24),
 				".items[0].id.videoId":                        z.NewStringToken("TvWDY4Mm5GM", 11, 52),
-				".items[0].snippet.publishTime":               z.NewStringToken("2023-07-24T14:15:01Z", 39, 26),
+				".items[0].snippet.publishedAt":               z.NewStringToken("2023-07-24T14:15:01Z", 13, 26),
 				".items[0].snippet.channelId":                 z.NewStringToken("UCwozCpFp9g9x0wAzuFh0hwQ", 14, 24),
 				".items[0].snippet.title":                     z.NewStringToken("3 Football Clubs Kylian Mbappe Should Avoid Signing ✍️❌⚽️ #football #mbappe #shorts", 15, 20),
 				".items[0].snippet.description":               z.NewStringToken("", 16, 26),
 				".items[0].snippet.thumbnails.default.url":    z.NewStringToken("https://i.ytimg.com/vi/TvWDY4Mm5GM/default.jpg", 19, 22),
 				".items[0].snippet.thumbnails.default.width":  z.NewNumberToken("120", 20, 24),
 				".items[0].snippet.thumbnails.default.height": z.NewNumberToken("90", 21, 25),
-				".items[0].snippet.thumbnails.medium.url":     z.NewStringToken("https://i.ytimg.com/vi/TvWDY4Mm5GM/mqdefault.jpg", 25, 22),
-				".items[0].snippet.thumbnails.medium.height":  z.NewNumberToken("180", 27, 25),
-				".items[0].snippet.thumbnails.medium.width":   z.NewNumberToken("320", 26, 24),
-				".items[0].snippet.thumbnails.high.url":       z.NewStringToken("https://i.ytimg.com/vi/TvWDY4Mm5GM/hqdefault.jpg", 31, 22),
-				".items[0].snippet.thumbnails.high.width":     z.NewNumberToken("480", 32, 24),
-				".items[0].snippet.thumbnails.high.height":    z.NewNumberToken("360", 33, 25),
-				".items[0].snippet.channelTitle":              z.NewStringToken("FC Motivate", 37, 27),
-				".items[0].snippet.liveBroadcastContent":      z.NewStringToken("none", 38, 35),
-				".items[0].snippet.publishedAt":               z.NewStringToken("2023-07-24T14:15:01Z", 13, 26),
+				".items[0].snippet.thumbnails.medium.url":     z.NewStringToken("https://i.ytimg.com/vi/TvWDY4Mm5GM/mqdefault.jpg", 24, 22),
+				".items[0].snippet.thumbnails.medium.width":   z.NewNumberToken("320", 25, 24),
+				".items[0].snippet.thumbnails.medium.height":  z.NewNumberToken("180", 26, 25),
+				".items[0].snippet.thumbnails.high.url":       z.NewStringToken("https://i.ytimg.com/vi/TvWDY4Mm5GM/hqdefault.jpg", 29, 22),
+				".items[0].snippet.thumbnails.high.width":     z.NewNumberToken("480", 30, 24),
+				".items[0].snippet.thumbnails.high.height":    z.NewNumberToken("360", 31, 25),
+				".items[0].snippet.channelTitle":              z.NewStringToken("FC Motivate", 34, 27),
+				".items[0].snippet.liveBroadcastContent":      z.NewStringToken("none", 35, 35),
+				".items[0].snippet.publishTime":               z.NewStringToken("2023-07-24T14:15:01Z", 36, 26),
 			},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			json, err := os.ReadFile(tc.name)
+			file, err := os.Open(tc.name)
 			if err != nil {
 				t.Fatal(err)
 			}
+			defer file.Close()
 
 			collector := CollectorMatcher{
 				matches: make(map[string]z.Token),
 			}
 
-			Match(string(json), &collector)
+			Match(file, &collector)
 
 			if !reflect.DeepEqual(collector.matches, tc.expected) {
 				t.Errorf("Expected '%v', got '%v' instead\n", tc.expected, collector.matches)

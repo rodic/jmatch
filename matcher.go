@@ -1,6 +1,8 @@
 package jmatch
 
 import (
+	"io"
+
 	m "github.com/rodic/jmatch/matcher"
 	p "github.com/rodic/jmatch/parser"
 	t "github.com/rodic/jmatch/tokenizer"
@@ -9,9 +11,9 @@ import (
 type Token = t.Token
 
 // tokenizer -> parser -> matcher
-func Match(json string, matcher m.Matcher) error {
+func Match(reader io.Reader, matcher m.Matcher) error {
 
-	tokenizer := t.NewTokenizer(json)
+	tokenizer := t.NewTokenizer(reader)
 
 	go tokenizer.Tokenize()
 

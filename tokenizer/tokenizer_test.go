@@ -2,6 +2,7 @@ package tokenizer
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -165,7 +166,7 @@ func TestTokenizeValidInputs(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			result := make([]Token, 0, 10)
-			tokenizer := NewTokenizer(tc.input)
+			tokenizer := NewTokenizer(strings.NewReader(tc.input))
 			go tokenizer.Tokenize()
 
 			for tokenResult := range tokenizer.GetTokenReadStream() {
@@ -188,6 +189,15 @@ func TestTokenizeInvalidInputs(t *testing.T) {
 		input    string
 		expected string
 	}{
+		{name: "invalidMinus",
+			input:    "{\"a\":-}",
+			expected: "invalid JSON. unexpected token } at line 1 column 7"},
+		{name: "invalidDot",
+			input:    "{\"a\":.}",
+			expected: "invalid JSON. unexpected token . at line 1 column 6"},
+		{name: "invalidNumWithDot",
+			input:    "{\"a\":123.}",
+			expected: "invalid JSON. unexpected token } at line 1 column 10"},
 		{name: "invalidNumber",
 			input:    "{\"a\":1.2.3}",
 			expected: "invalid JSON. unexpected token . at line 1 column 9"},
@@ -198,7 +208,7 @@ func TestTokenizeInvalidInputs(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tokenizer := NewTokenizer(tc.input)
+			tokenizer := NewTokenizer(strings.NewReader(tc.input))
 			go tokenizer.Tokenize()
 
 			var lastTokenResult TokenResult
@@ -207,7 +217,9 @@ func TestTokenizeInvalidInputs(t *testing.T) {
 				lastTokenResult = tokenResult
 			}
 
-			if lastTokenResult.Error.Error() != tc.expected {
+			if lastTokenResult.Error == nil {
+				t.Errorf("Expected error %s but got %v", tc.expected, lastTokenResult.Token)
+			} else if lastTokenResult.Error.Error() != tc.expected {
 				t.Errorf("Expected error %s got %s", tc.expected, lastTokenResult.Error)
 			}
 		})

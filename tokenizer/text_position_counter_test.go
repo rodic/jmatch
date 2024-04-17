@@ -14,7 +14,7 @@ func TestTextPositionCounter(t *testing.T) {
 		t.Error("Invalid initial column count")
 	}
 
-	c.update('a')
+	c.increase('a')
 
 	if c.line != 1 {
 		t.Errorf("invalid line count, expected 1, got %d", c.line)
@@ -24,7 +24,7 @@ func TestTextPositionCounter(t *testing.T) {
 		t.Errorf("invalid column count, expected 1, got %d", c.column)
 	}
 
-	c.update('ü')
+	c.increase('ü')
 
 	if c.line != 1 {
 		t.Errorf("invalid line count, expected 1, got %d", c.line)
@@ -34,7 +34,7 @@ func TestTextPositionCounter(t *testing.T) {
 		t.Errorf("invalid column count, expected 2, got %d", c.column)
 	}
 
-	c.update('\n')
+	c.increase('\n')
 
 	if c.line != 2 {
 		t.Errorf("invalid line count, expected 2, got %d", c.line)
@@ -44,7 +44,18 @@ func TestTextPositionCounter(t *testing.T) {
 		t.Errorf("invalid column count, expected 0, got %d", c.column)
 	}
 
-	c.update('a')
+	c.decrease('\n')
+
+	if c.line != 1 {
+		t.Errorf("invalid line count, expected 1, got %d", c.line)
+	}
+
+	if c.column != 2 {
+		t.Errorf("invalid column count, expected 2, got %d", c.column)
+	}
+
+	c.increase('\n')
+	c.increase('a')
 
 	if c.line != 2 {
 		t.Errorf("invalid line count, expected 2, got %d", c.line)
@@ -54,7 +65,7 @@ func TestTextPositionCounter(t *testing.T) {
 		t.Errorf("invalid column count, expected 1, got %d", c.column)
 	}
 
-	c.decreaseColumn()
+	c.decrease('a')
 
 	if c.line != 2 {
 		t.Errorf("invalid line count, expected 2, got %d", c.line)
