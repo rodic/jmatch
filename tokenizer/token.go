@@ -20,21 +20,21 @@ const (
 type Token struct {
 	_type  tokenType
 	Value  string
-	line   int
-	column int
+	Line   int
+	Column int
 }
 
 func new(t tokenType, value string, line int, column int) Token {
 	return Token{
 		_type:  t,
 		Value:  value,
-		line:   line,
-		column: column,
+		Line:   line,
+		Column: column,
 	}
 }
 
 func NewStringToken(value string, line int, column int) Token {
-	return Token{_type: str, Value: value, line: line, column: column}
+	return Token{_type: str, Value: value, Line: line, Column: column}
 }
 
 func NewNumberToken(value string, line int, column int) Token {
@@ -50,27 +50,27 @@ func NewNullToken(line int, column int) Token {
 }
 
 func NewLeftBraceToken(line int, column int) Token {
-	return Token{_type: leftBrace, Value: "{", line: line, column: column}
+	return Token{_type: leftBrace, Value: "{", Line: line, Column: column}
 }
 
 func NewRightBraceToken(line int, column int) Token {
-	return Token{_type: rightBrace, Value: "}", line: line, column: column}
+	return Token{_type: rightBrace, Value: "}", Line: line, Column: column}
 }
 
 func NewLeftBracketToken(line int, column int) Token {
-	return Token{_type: leftBracket, Value: "[", line: line, column: column}
+	return Token{_type: leftBracket, Value: "[", Line: line, Column: column}
 }
 
 func NewRightBracketToken(line int, column int) Token {
-	return Token{_type: rightBracket, Value: "]", line: line, column: column}
+	return Token{_type: rightBracket, Value: "]", Line: line, Column: column}
 }
 
 func NewColonToken(line int, column int) Token {
-	return Token{_type: colon, Value: ":", line: line, column: column}
+	return Token{_type: colon, Value: ":", Line: line, Column: column}
 }
 
 func NewCommaToken(line int, column int) Token {
-	return Token{_type: comma, Value: ",", line: line, column: column}
+	return Token{_type: comma, Value: ",", Line: line, Column: column}
 }
 
 func (t Token) IsLeftBrace() bool {
@@ -114,5 +114,5 @@ func (t Token) IsColon() bool {
 }
 
 func (t Token) AsUnexpectedTokenErr() c.UnexpectedTokenErr {
-	return c.UnexpectedTokenErr{Token: t.Value, Line: t.line, Column: t.column}
+	return c.UnexpectedTokenErr{Token: t.Value, Line: t.Line, Column: t.Column}
 }
