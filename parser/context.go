@@ -26,11 +26,18 @@ func (o *objectContext) isKeySet() bool {
 }
 
 func (o *objectContext) setKey(key string) {
+	var newKey strings.Builder
+	newKey.WriteString(o.path)
+	newKey.WriteRune('.')
+
 	if strings.ContainsAny(key, " .") { // keys with . or space.
-		o.key = fmt.Sprintf("%s.\"%s\"", o.path, key)
+		newKey.WriteRune('"')
+		newKey.WriteString(key)
+		newKey.WriteRune('"')
 	} else {
-		o.key = fmt.Sprintf("%s.%s", o.path, key)
+		newKey.WriteString(key)
 	}
+	o.key = newKey.String()
 }
 
 func (o *objectContext) getPath() string {
