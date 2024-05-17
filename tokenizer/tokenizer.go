@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"unicode"
+	"strings"
 
 	c "github.com/rodic/jmatch/common"
 )
@@ -30,7 +31,7 @@ func (t *tokenizer) GetTokenReadStream() <-chan TokenResult {
 }
 
 func (t *tokenizer) getString() (string, error) {
-	res := []rune{}
+	var res strings.Builder
 
 	if err := t.runes.move(); err != nil {
 		return "", err
@@ -40,17 +41,19 @@ func (t *tokenizer) getString() (string, error) {
 		if t.runes.current == '"' {
 			break
 		}
-		res = append(res, t.runes.current)
+		res.WriteRune(t.runes.current)
 
 		if err := t.runes.move(); err != nil {
 			return "", err
 		}
 	}
-	return string(res), nil
+	return res.String(), nil
 }
 
 func (t *tokenizer) getNumber() (string, error) {
-	res := []rune{t.runes.current}
+	var res strings.Builder
+
+	res.WriteRune(t.runes.current)
 
 	dotCount := 0
 	isDigitSet := t.runes.current != '-'
@@ -62,10 +65,10 @@ func (t *tokenizer) getNumber() (string, error) {
 
 		if unicode.IsDigit(t.runes.current) {
 			isDigitSet = true
-			res = append(res, t.runes.current)
+			res.WriteRune(t.runes.current)
 		} else if t.runes.current == '.' && dotCount == 0 && isDigitSet {
 			dotCount++
-			res = append(res, t.runes.current)
+			res.WriteRune(t.runes.current)
 		} else {
 			t.runes.rewind()
 			break
@@ -78,11 +81,14 @@ func (t *tokenizer) getNumber() (string, error) {
 		return string(t.runes.current), fmt.Errorf("invalid number")
 	}
 
-	return string(res), nil
+	return res.String(), nil
 }
 
 func (t *tokenizer) getText() (string, error) {
-	res := []rune{t.runes.current}
+	var res strings.Builder
+
+	res.WriteRune(t.runes.current)
+
 
 	for {
 		if err := t.runes.move(); err != nil {
@@ -90,13 +96,13 @@ func (t *tokenizer) getText() (string, error) {
 		}
 
 		if unicode.IsLetter(t.runes.current) {
-			res = append(res, t.runes.current)
+			res.WriteRune(t.runes.current)
 		} else {
 			t.runes.rewind()
 			break
 		}
 	}
-	return string(res), nil
+	return res.String(), nil
 }
 
 func (t *tokenizer) writeTokenResult(token Token) {

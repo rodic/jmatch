@@ -162,3 +162,17 @@ func TestMatcherValid(t *testing.T) {
 		})
 	}
 }
+
+func BenchmarkMatch(b *testing.B) {
+	file, err := os.Open("testdata/bench/users_100k.json")
+
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer file.Close()
+
+	for i := 0; i < b.N; i++ {
+
+		Match(file, func(path string, token z.Token) {})
+	}
+}
